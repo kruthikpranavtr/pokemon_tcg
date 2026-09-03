@@ -316,7 +316,14 @@ class TCGMatchEngine:
     def play_hand_card(self, card_name: str, target: Optional[str] = None) -> Dict[str, Any]:
         """Plays a card from the player's hand with full rules resolution."""
         if card_name not in self.player_hand:
-            return {"status": "error", "message": f"'{card_name}' is not in hand."}
+            # If it's an energy card and energy attachment hasn't been used, find and attach from deck
+            if ("energy" in card_name.lower()) and not self.energy_attached_this_turn:
+                for idx, c in enumerate(self.player_deck):
+                    if "energy" in c.lower():
+                        card_name = self.player_deck.pop(idx)
+                        break
+            else:
+                return {"status": "error", "message": f"'{card_name}' is not in hand."}
 
         meta = self._get_meta(card_name)
         stype = (meta.get("supertype") or "").lower()
