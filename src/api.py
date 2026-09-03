@@ -1724,7 +1724,7 @@ HTML_DASHBOARD_CONTENT = """
                         </div>
                         <div id="slot-card-4" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px;">
                             <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 4: BENCH SUB #3</div>
-                            <div id="slot-name-4" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Sinistcha ex (240 HP)</div>
+                            <div id="slot-name-4" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Venusaur ex (240 HP)</div>
                             <div id="slot-type-4" style="font-size:0.7rem; color:#cbd5e1;">Type: Grass &bull; 120 DMG</div>
                         </div>
                     </div>
@@ -1941,11 +1941,11 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "27", name: "Iron Leaves", hp: 120, supertype: "Pokémon", subtypes: ["Basic"], types: ["Grass"],
-                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
+                    card_id: "27", name: "Venusaur", hp: 120, supertype: "Pokémon", subtypes: ["Basic"], types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 2,
                     attacks: [
-                        { name: "Recovery Net", cost: ["Grass"], base_damage: 0, text: "Put up to 2 Pokémon from discard into hand." },
-                        { name: "Avenging Edge", cost: ["Grass", "Colorless", "Colorless"], base_damage: 100, text: "Deals 100 heavy Grass damage." }
+                        { name: "Vine Whip", cost: ["Grass"], base_damage: 40, text: "Strikes target with vines." },
+                        { name: "Solar Beam", cost: ["Grass", "Grass", "Colorless"], base_damage: 100, text: "Deals 100 heavy Grass damage." }
                     ]
                 },
                 {
@@ -1965,16 +1965,16 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "31", name: "Chi-Yu", hp: 110, supertype: "Pokémon", subtypes: ["Basic"], types: ["Fire"],
+                    card_id: "31", name: "Ninetales", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Fire"],
                     weaknesses: [{ type: "Water", value: "x2" }], retreat: 1,
                     attacks: [
-                        { name: "Allure", cost: ["Colorless"], base_damage: 0, text: "Draw 2 cards." },
-                        { name: "Ground Melter", cost: ["Fire", "Colorless"], base_damage: 60, text: "Deals 60 damage. If Stadium in play, deals +60." }
+                        { name: "Will-O-Wisp", cost: ["Fire"], base_damage: 40, text: "Burns the target." },
+                        { name: "Fire Blast", cost: ["Fire", "Fire", "Colorless"], base_damage: 110, text: "Deals 110 fire damage." }
                     ]
                 },
                 {
-                    card_id: "37", name: "Iron Thorns ex", hp: 230, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Lightning"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 4,
+                    card_id: "37", name: "Tyranitar ex", hp: 230, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Lightning"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 3,
                     attacks: [
                         { name: "Volt Cyclone", cost: ["Lightning", "Colorless", "Colorless"], base_damage: 140, text: "Move an Energy from this Pokémon to Bench." }
                     ]
@@ -1988,26 +1988,27 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "41", name: "Ting-Lu", hp: 140, supertype: "Pokémon", subtypes: ["Basic"], types: ["Fighting"],
-                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 3,
+                    card_id: "41", name: "Lucario", hp: 140, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Fighting"],
+                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 2,
                     attacks: [
-                        { name: "Ground Crasher", cost: ["Fighting"], base_damage: 30, text: "Deals 30 damage to opponent." },
-                        { name: "Hammer In", cost: ["Fighting", "Fighting", "Colorless"], base_damage: 110, text: "Deals 110 Fighting damage." }
+                        { name: "Aura Sphere", cost: ["Fighting"], base_damage: 60, text: "Deals 60 damage to opponent." },
+                        { name: "Close Combat", cost: ["Fighting", "Fighting", "Colorless"], base_damage: 130, text: "Deals 130 Fighting damage." }
                     ]
                 },
                 {
-                    card_id: "44", name: "Bloodmoon Ursaluna ex", hp: 260, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Colorless"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 3,
+                    card_id: "44", name: "Snorlax ex", hp: 260, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Colorless"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 4,
                     attacks: [
-                        { name: "Blood Moon", cost: ["Colorless", "Colorless", "Colorless", "Colorless", "Colorless"], base_damage: 240, text: "Costs 1 less for each prize opponent has taken." }
+                        { name: "Heavy Slam", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 140, text: "Massive body slam." },
+                        { name: "Hyper Beam", cost: ["Colorless", "Colorless", "Colorless", "Colorless"], base_damage: 200, text: "Devastating hyper beam attack." }
                     ]
                 },
                 {
-                    card_id: "46", name: "Gouging Fire ex", hp: 230, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Fire"],
+                    card_id: "46", name: "Arcanine ex", hp: 230, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], types: ["Fire"],
                     weaknesses: [{ type: "Water", value: "x2" }], retreat: 2,
                     attacks: [
                         { name: "Heat Blast", cost: ["Fire", "Colorless"], base_damage: 60, text: "Deals 60 damage." },
-                        { name: "Blaze Blitz", cost: ["Fire", "Fire", "Colorless"], base_damage: 260, text: "Devastating 260 fire explosion." }
+                        { name: "Raging Inferno", cost: ["Fire", "Fire", "Colorless"], base_damage: 260, text: "Devastating 260 fire explosion." }
                     ]
                 },
                 {
@@ -2026,21 +2027,21 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "56", name: "Flutter Mane", hp: 90, supertype: "Pokémon", subtypes: ["Basic"], types: ["Psychic"],
-                    weaknesses: [{ type: "Metal", value: "x2" }], retreat: 1,
+                    card_id: "56", name: "Gengar", hp: 130, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Psychic"],
+                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
                     attacks: [
-                        { name: "Hex Hurl", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 90, text: "Put 2 damage counters on opponent's bench." }
+                        { name: "Shadow Ball", cost: ["Psychic", "Colorless"], base_damage: 90, text: "Put 2 damage counters on opponent's bench." }
                     ]
                 },
                 {
-                    card_id: "58", name: "Great Tusk", hp: 140, supertype: "Pokémon", subtypes: ["Basic"], types: ["Fighting"],
+                    card_id: "58", name: "Machamp", hp: 150, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Fighting"],
                     weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 3,
                     attacks: [
-                        { name: "Giant Tusk", cost: ["Fighting", "Fighting", "Colorless", "Colorless"], base_damage: 160, text: "Deals 160 brute damage." }
+                        { name: "Dynamic Punch", cost: ["Fighting", "Fighting", "Colorless", "Colorless"], base_damage: 160, text: "Deals 160 brute damage." }
                     ]
                 },
                 {
-                    card_id: "61", name: "Roaring Moon", hp: 140, supertype: "Pokémon", subtypes: ["Basic"], types: ["Darkness"],
+                    card_id: "61", name: "Salamence", hp: 150, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Darkness"],
                     weaknesses: [{ type: "Grass", value: "x2" }], retreat: 2,
                     attacks: [
                         { name: "Speed Wing", cost: ["Darkness", "Colorless", "Colorless"], base_damage: 120, text: "High speed dark wing strike." }
@@ -2054,17 +2055,17 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "63", name: "Raging Bolt ex", hp: 240, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Dragon"],
-                    weaknesses: [], retreat: 3,
+                    card_id: "63", name: "Dragonite ex", hp: 250, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Dragon"],
+                    weaknesses: [], retreat: 2,
                     attacks: [
-                        { name: "Bellowing Thunder", cost: ["Lightning", "Fighting"], base_damage: 140, text: "Discard Basic Energy for 70x damage." }
+                        { name: "Dragon Pulse", cost: ["Lightning", "Fighting"], base_damage: 160, text: "Deals 160 draconic damage." }
                     ]
                 },
                 {
-                    card_id: "75", name: "Iron Leaves ex", hp: 220, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Grass"],
-                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
+                    card_id: "75", name: "Venusaur ex", hp: 240, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 2,
                     attacks: [
-                        { name: "Prism Edge", cost: ["Grass", "Grass", "Colorless"], base_damage: 180, text: "Deals 180 razor prism damage." }
+                        { name: "Giant Bloom", cost: ["Grass", "Grass", "Colorless"], base_damage: 180, text: "Deals 180 solar bloom damage and heals 30 HP." }
                     ]
                 },
                 {
@@ -2075,10 +2076,10 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "80", name: "Iron Crown ex", hp: 220, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Psychic"],
-                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 2,
+                    card_id: "80", name: "Alakazam ex", hp: 220, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Psychic"],
+                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
                     attacks: [
-                        { name: "Twin Shotels", cost: ["Psychic", "Colorless", "Colorless"], base_damage: 100, text: "Deals 50 damage to 2 opponent Pokémon." }
+                        { name: "Psychic", cost: ["Psychic", "Colorless", "Colorless"], base_damage: 130, text: "Deals 130 psychic wave damage." }
                     ]
                 },
                 {
@@ -2187,8 +2188,8 @@ HTML_DASHBOARD_CONTENT = """
                 ALL_CARDS_MAP[c.card_id] = c;
             });
 
-            let CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Sinistcha ex"];
-            let OPPONENT_4_CARDS = ["Miraidon ex", "Iron Thorns ex", "Raichu", "Zapdos"];
+            let CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
+            let OPPONENT_4_CARDS = ["Miraidon ex", "Tyranitar ex", "Raichu", "Zapdos"];
             let CURRENT_MATCH_STATE = null;
             let LATEST_AI_REC = null;
             let CUSTOM_DECK = {};
@@ -2268,7 +2269,7 @@ HTML_DASHBOARD_CONTENT = """
             }
 
             function resetChosen4Cards() {
-                CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Sinistcha ex"];
+                CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
                 updateChosen4CardsUI();
             }
 
@@ -2631,6 +2632,179 @@ HTML_DASHBOARD_CONTENT = """
                 else claimRandomDeckCard();
             }
 
+            // ================= 7. 3D CARD REVEAL MODAL =================
+            function show3DCardRevealModal(cardName, cardType) {
+                let modal = document.getElementById('card-reveal-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'card-reveal-modal';
+                    modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(14px); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; perspective:1200px; transition:opacity 0.4s;';
+                    modal.onclick = () => { modal.style.display = 'none'; };
+                    document.body.appendChild(modal);
+                }
+
+                const meta = getMeta(cardName);
+                const types = (meta.types || ['Normal']).join(', ');
+
+                modal.innerHTML = `
+                    <div style="font-family:var(--font-orbitron); font-size:1.4rem; color:var(--neon-cyan); margin-bottom:18px; font-weight:900; text-shadow:0 0 20px rgba(0,243,255,0.8);">
+                        🃏 CARD DRAWN FROM MYSTERY DECK
+                    </div>
+                    <div style="width:260px; height:360px; background:linear-gradient(135deg, #0d162c, #050a14); border:2px solid var(--neon-cyan); border-radius:14px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 0 35px rgba(0,243,255,0.6); animation:cardFlipIn 0.8s ease-out;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim);">${cardType}</span>
+                            <span style="font-family:var(--font-orbitron); font-size:0.85rem; color:#34d399; font-weight:800;">${meta.hp ? meta.hp + ' HP' : ''}</span>
+                        </div>
+                        <div style="text-align:center; padding:10px 0;">
+                            <div style="font-size:3.5rem; margin-bottom:8px;">🔥</div>
+                            <div style="font-family:var(--font-orbitron); font-size:1.2rem; font-weight:900; color:#fff;">${cardName}</div>
+                            <div style="font-size:0.75rem; color:var(--neon-cyan); margin-top:4px;">${types}</div>
+                        </div>
+                        <div style="font-size:0.7rem; color:#94a3b8; text-align:center;">Click anywhere to place card in Hand</div>
+                    </div>
+                `;
+
+                modal.style.display = 'flex';
+                modal.style.opacity = '1';
+
+                setTimeout(() => {
+                    modal.style.opacity = '0';
+                    setTimeout(() => { modal.style.display = 'none'; }, 400);
+                }, 1800);
+            }
+
+            // ================= 8. CARDS DATABASE GRID =================
+            function renderCardsDatabaseGrid() {
+                const pkmnGrid = document.getElementById('pokemon-cards-grid');
+                const trGrid = document.getElementById('trainer-cards-grid');
+                const enGrid = document.getElementById('energy-cards-grid');
+
+                if (pkmnGrid) pkmnGrid.innerHTML = '';
+                if (trGrid) trGrid.innerHTML = '';
+                if (enGrid) enGrid.innerHTML = '';
+
+                DATASET_CARDS.forEach(c => {
+                    const stype = (c.supertype || '').toLowerCase();
+                    const div = document.createElement('div');
+                    div.className = 'dataset-card-box';
+                    div.style.cssText = 'background:rgba(13,22,44,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:10px;';
+
+                    let content = `
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">${c.subtypes ? c.subtypes.join(' • ') : c.supertype}</span>
+                                <span style="font-family:var(--font-orbitron); font-size:0.85rem; font-weight:900; color:#34d399;">${c.hp ? c.hp + ' HP' : ''}</span>
+                            </div>
+                            <div style="font-family:var(--font-orbitron); font-size:1rem; font-weight:900; color:#fff; margin:6px 0;">${c.name}</div>
+                            <div style="font-size:0.75rem; color:var(--neon-cyan); margin-bottom:6px;">Type: ${(c.types || []).join(', ') || 'Colorless'}</div>
+                    `;
+
+                    (c.attacks || []).forEach(atk => {
+                        content += `
+                            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:4px 6px; margin-top:4px; display:flex; justify-content:space-between; font-size:0.75rem;">
+                                <span>${atk.name}</span>
+                                <b style="color:var(--neon-amber);">${atk.base_damage ? atk.base_damage + ' DMG' : 'Effect'}</b>
+                            </div>
+                        `;
+                    });
+
+                    content += `</div>`;
+
+                    if (stype.includes('pok')) {
+                        content += `
+                            <div style="margin-top:12px;">
+                                <button class="btn-action-main btn-choose-card" style="width:100%; font-size:0.75rem; padding:6px 10px; border-color:var(--neon-cyan); text-align:center;">🎯 CHOOSE FOR 4-CARD BATTLE</button>
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = content;
+                    const btn = div.querySelector('.btn-choose-card');
+                    if (btn) btn.onclick = () => chooseCardFor4Slot(c.name);
+
+                    if (stype.includes('pok') && pkmnGrid) pkmnGrid.appendChild(div);
+                    else if (stype.includes('trainer') && trGrid) trGrid.appendChild(div);
+                    else if (stype.includes('energy') && enGrid) enGrid.appendChild(div);
+                });
+            }
+
+            function filterCardsDatabase() {
+                const input = document.getElementById('cards-search-input');
+                const query = input ? input.value.toLowerCase().trim() : '';
+                document.querySelectorAll('.dataset-card-box').forEach(el => {
+                    const text = el.textContent.toLowerCase();
+                    el.style.display = text.includes(query) ? 'flex' : 'none';
+                });
+            }
+
+            function setCardCategoryFilter(cat, btnEl) {
+                document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+                if (btnEl) btnEl.classList.add('active');
+
+                const sp = document.getElementById('section-pokemon-container');
+                const st = document.getElementById('section-trainer-container');
+                const se = document.getElementById('section-energy-container');
+
+                if (cat === 'all') {
+                    if (sp) sp.style.display = 'block';
+                    if (st) st.style.display = 'block';
+                    if (se) se.style.display = 'block';
+                } else if (cat === 'pokemon') {
+                    if (sp) sp.style.display = 'block';
+                    if (st) st.style.display = 'none';
+                    if (se) se.style.display = 'none';
+                } else if (cat === 'trainer') {
+                    if (sp) sp.style.display = 'none';
+                    if (st) st.style.display = 'block';
+                    if (se) se.style.display = 'none';
+                } else if (cat === 'energy') {
+                    if (sp) sp.style.display = 'none';
+                    if (st) st.style.display = 'none';
+                    if (se) se.style.display = 'block';
+                }
+            }
+
+            // ================= 9. META PRESETS =================
+            function renderDeckBuilderPreview(deckId) {
+                CURRENT_PREVIEW_ARCHETYPE = deckId;
+                const nameEl = document.getElementById('arch-active-name');
+                if (nameEl) nameEl.textContent = deckId.replace(/-/g, ' ').toUpperCase();
+            }
+
+            function selectArchetypePreview(deckId, btnEl) {
+                document.querySelectorAll('.archetype-chip').forEach(b => b.classList.remove('active'));
+                if (btnEl) btnEl.classList.add('active');
+                renderDeckBuilderPreview(deckId);
+            }
+
+            function startMatchWithCurrentDeck() {
+                if (CURRENT_PREVIEW_ARCHETYPE === 'miraidon-ex-regieleki') {
+                    CHOSEN_4_CARDS = ["Miraidon ex", "Tyranitar ex", "Raichu", "Zapdos"];
+                    OPPONENT_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
+                } else if (CURRENT_PREVIEW_ARCHETYPE === 'gardevoir-ex') {
+                    CHOSEN_4_CARDS = ["Mewtwo ex", "Gengar", "Alakazam ex", "Kangaskhan ex"];
+                    OPPONENT_4_CARDS = ["Salamence", "Dragonite ex", "Lucario", "Machamp"];
+                } else {
+                    CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
+                    OPPONENT_4_CARDS = ["Miraidon ex", "Tyranitar ex", "Raichu", "Zapdos"];
+                }
+                startNewMatch();
+                switchMode('match');
+            }
+
+            function initApp() {
+                const bm = document.getElementById('tab-btn-match');
+                const bc = document.getElementById('tab-btn-cards');
+                const bd = document.getElementById('tab-btn-deck');
+                if (bm) bm.onclick = () => switchMode('match');
+                if (bc) bc.onclick = () => switchMode('cards');
+                if (bd) bd.onclick = () => switchMode('deck');
+
+                startNewMatch();
+                renderCardsDatabaseGrid();
+                updateChosen4CardsUI();
+            }
+
             window.initApp = initApp;
             window.switchMode = switchMode;
             window.chooseCardFor4Slot = chooseCardFor4Slot;
@@ -2643,6 +2817,11 @@ HTML_DASHBOARD_CONTENT = """
             window.executeAiRecommendation = executeAiRecommendation;
             window.promptAddEnergyDirect = promptAddEnergyDirect;
             window.getApiKey = getApiKey;
+            window.renderCardsDatabaseGrid = renderCardsDatabaseGrid;
+            window.filterCardsDatabase = filterCardsDatabase;
+            window.setCardCategoryFilter = setCardCategoryFilter;
+            window.selectArchetypePreview = selectArchetypePreview;
+            window.startMatchWithCurrentDeck = startMatchWithCurrentDeck;
             window.onload = initApp;
         </script>
     </body>
