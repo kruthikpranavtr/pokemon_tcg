@@ -1,0 +1,61 @@
+{
+  "format": "Standard (Scarlet & Violet Regulation F-G-H)",
+  "updated_at": "2026-08-29",
+  "archetypes": [
+    {
+      "archetype_id": "charizard-ex-pidgeot",
+      "name": "Charizard ex / Pidgeot ex",
+      "tier": "Tier 1",
+      "meta_share": 0.22,
+      "primary_type": "Darkness",
+      "core_cards": [
+        {"card_id": "sv3-125", "count": 3, "name": "Charizard ex"},
+        {"card_id": "sv3-26", "count": 4, "name": "Charmander"},
+        {"card_id": "sv3-27", "count": 1, "name": "Charmeleon"},
+        {"card_id": "sv3-164", "count": 2, "name": "Pidgeot ex"},
+        {"card_id": "sv3-162", "count": 2, "name": "Pidgey"},
+        {"card_id": "sv2-93", "count": 1, "name": "Radiant Greninja"},
+        {"card_id": "sv1-191", "count": 4, "name": "Rare Candy"},
+        {"card_id": "sv1-196", "count": 4, "name": "Ultra Ball"},
+        {"card_id": "sv1-181", "count": 4, "name": "Nest Ball"},
+        {"card_id": "sv1-166", "count": 3, "name": "Arven"},
+        {"card_id": "sv2-185", "count": 3, "name": "Iono"},
+        {"card_id": "sv1-189", "count": 2, "name": "Professor's Research"},
+        {"card_id": "sv5-144", "count": 1, "name": "Prime Catcher"},
+        {"card_id": "sv1-167", "count": 2, "name": "Artazon"},
+        {"card_id": "sve-2", "count": 6, "name": "Basic Fire Energy"}
+      ],
+      "matchups": {
+        "miraidon-ex": 0.58,
+        "gardevoir-ex": 0.54,
+        "lost-zone-box": 0.48,
+        "lugia-vstar": 0.56,
+        "mirror": 0.50
+      }
+    },
+    {
+      "archetype_id": "miraidon-ex",
+      "name": "Miraidon ex / Iron Hands",
+      "tier": "Tier 1",
+      "meta_share": 0.18,
+      "primary_type": "Lightning",
+      "core_cards": [
+        {"card_id": "sv1-86", "count": 3, "name": "Miraidon ex"},
+        {"card_id": "sv4-70", "count": 2, "name": "Iron Hands ex"},
+        {"card_id": "sv1-196", "count": 4, "name": "Ultra Ball"},
+        {"card_id": "sv1-181", "count": 4, "name": "Nest Ball"},
+        {"card_id": "sv1-189", "count": 4, "name": "Professor's Research"},
+        {"card_id": "sv2-185", "count": 3, "name": "Iono"},
+        {"card_id": "sv5-144", "count": 1, "name": "Prime Catcher"},
+        {"card_id": "sve-4", "count": 14, "name": "Basic Lightning Energy"}
+      ],
+      "matchups": {
+        "charizard-ex-pidgeot": 0.42,
+        "gardevoir-ex": 0.49,
+        "lost-zone-box": 0.61,
+        "lugia-vstar": 0.65,
+        "mirror": 0.50
+      }
+    }
+  ]
+}
