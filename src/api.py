@@ -1669,7 +1669,7 @@ HTML_DASHBOARD_CONTENT = """
                                 <option value="miraidon-ex-regieleki">Miraidon ex / Iron Hands ex (Tier 1)</option>
                                 <option value="gardevoir-ex">Gardevoir ex / Scream Tail (Tier 1)</option>
                             </select>
-                            <button class="btn-cyber-sm" style="width:100%; text-align:center;" onclick="startNewMatch()">⚡ RESTART MATCH</button>
+                            <button class="btn-cyber-sm" style="width:100%; text-align:center;" onclick="startNewMatch()">🎲 RESTART MATCH (NEW RANDOM DECK & POKÉMON)</button>
                         </div>
 
                         <!-- COMBAT LOG -->
@@ -1686,10 +1686,10 @@ HTML_DASHBOARD_CONTENT = """
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                         <div>
                             <div style="font-family:var(--font-orbitron); font-size:1.15rem; font-weight:900; color:var(--neon-cyan);">
-                                🎯 CHOOSE YOUR 4 CARDS (1 MAIN ACTIVE + 3 BENCH SUB POKÉMON)
+                                🎯 CHOOSE YOUR 4 CARDS (BASIC POKÉMON ONLY)
                             </div>
                             <div style="font-size:0.82rem; color:var(--text-dim); margin-top:2px;">
-                                Pick 4 cards from the official Pokémon dataset below. Place 1 as your Main Pokémon and 3 on your Bench. The AI will sample 4 counter Pokémon and launch your match!
+                                Pick 4 Basic Pokémon cards from the official Pokémon dataset below. Slot 1 becomes your Main Active Pokémon and Slots 2–4 become your Bench. Stage 1 & Stage 2 cards must be evolved legally during battle!
                             </div>
                         </div>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -1697,7 +1697,7 @@ HTML_DASHBOARD_CONTENT = """
                                 ⚔️ PLACE MY 4 CARDS & START BATTLE
                             </button>
                             <button class="btn-cyber-sm" style="background:var(--neon-amber); color:#000; font-weight:900; padding:10px 14px;" onclick="dealRandom4Cards()">
-                                🎲 AUTO-DEAL 4 RANDOM CARDS
+                                🎲 AUTO-DEAL 4 RANDOM BASIC
                             </button>
                             <button class="btn-cyber-sm" style="border-color:#ef4444; color:#fca5a5; padding:10px 14px;" onclick="resetChosen4Cards()">
                                 🔄 RESET
@@ -1708,24 +1708,24 @@ HTML_DASHBOARD_CONTENT = """
                     <!-- 4 Slots Display -->
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:14px;">
                         <div id="slot-card-1" class="cd-stat-pill" style="border:2px solid var(--neon-cyan); background:rgba(0,243,255,0.12); flex-direction:column; align-items:flex-start; padding:10px;">
-                            <div style="font-size:0.7rem; color:var(--neon-cyan); font-family:var(--font-orbitron); font-weight:800;">👑 SLOT 1: MAIN ACTIVE</div>
-                            <div id="slot-name-1" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Charizard ex (330 HP)</div>
-                            <div id="slot-type-1" style="font-size:0.7rem; color:#cbd5e1;">Type: Fire &bull; 180 DMG</div>
+                            <div style="font-size:0.7rem; color:var(--neon-cyan); font-family:var(--font-orbitron); font-weight:800;">👑 SLOT 1: MAIN ACTIVE (BASIC ONLY)</div>
+                            <div id="slot-name-1" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Charmander (70 HP)</div>
+                            <div id="slot-type-1" style="font-size:0.7rem; color:#cbd5e1;">Type: Fire &bull; 30 DMG</div>
                         </div>
                         <div id="slot-card-2" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px;">
-                            <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 2: BENCH SUB #1</div>
-                            <div id="slot-name-2" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Charmander (70 HP)</div>
-                            <div id="slot-type-2" style="font-size:0.7rem; color:#cbd5e1;">Type: Fire &bull; 30 DMG</div>
+                            <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 2: BENCH SUB #1 (BASIC ONLY)</div>
+                            <div id="slot-name-2" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Pikachu (60 HP)</div>
+                            <div id="slot-type-2" style="font-size:0.7rem; color:#cbd5e1;">Type: Lightning &bull; 40 DMG</div>
                         </div>
                         <div id="slot-card-3" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px;">
-                            <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 3: BENCH SUB #2</div>
-                            <div id="slot-name-3" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Pidgeot ex (280 HP)</div>
-                            <div id="slot-type-3" style="font-size:0.7rem; color:#cbd5e1;">Type: Colorless &bull; 120 DMG</div>
+                            <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 3: BENCH SUB #2 (BASIC ONLY)</div>
+                            <div id="slot-name-3" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Eevee (50 HP)</div>
+                            <div id="slot-type-3" style="font-size:0.7rem; color:#cbd5e1;">Type: Colorless &bull; 30 DMG</div>
                         </div>
                         <div id="slot-card-4" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px;">
-                            <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 4: BENCH SUB #3</div>
-                            <div id="slot-name-4" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Venusaur ex (240 HP)</div>
-                            <div id="slot-type-4" style="font-size:0.7rem; color:#cbd5e1;">Type: Grass &bull; 120 DMG</div>
+                            <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 4: BENCH SUB #3 (BASIC ONLY)</div>
+                            <div id="slot-name-4" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Snorlax (150 HP)</div>
+                            <div id="slot-type-4" style="font-size:0.7rem; color:#cbd5e1;">Type: Colorless &bull; 130 DMG</div>
                         </div>
                     </div>
                 </div>
@@ -1924,174 +1924,9 @@ HTML_DASHBOARD_CONTENT = """
         <script>
             // ================= POKÉMON TCG OFFICIAL DATASET CARDS (FROM CSV) =================
             const DATASET_CARDS = [
+                // --- BASIC POKÉMON ---
                 {
-                    card_id: "24", name: "Kangaskhan ex", hp: 230, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Colorless"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Comet Punch", cost: ["Colorless", "Colorless"], base_damage: 60, text: "Flip 4 coins. 30 damage for each heads." },
-                        { name: "Wicked Impact", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 120, text: "Deals 120 damage to opponent." }
-                    ]
-                },
-                {
-                    card_id: "26", name: "Leafeon", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Grass"],
-                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Leaflet Blessings", cost: ["Colorless"], base_damage: 0, text: "Attach a Grass Energy from hand to bench." },
-                        { name: "Solar Beam", cost: ["Grass", "Colorless"], base_damage: 70, text: "Deals 70 Grass damage." }
-                    ]
-                },
-                {
-                    card_id: "27", name: "Venusaur", hp: 120, supertype: "Pokémon", subtypes: ["Basic"], types: ["Grass"],
-                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Vine Whip", cost: ["Grass"], base_damage: 40, text: "Strikes target with vines." },
-                        { name: "Solar Beam", cost: ["Grass", "Grass", "Colorless"], base_damage: 100, text: "Deals 100 heavy Grass damage." }
-                    ]
-                },
-                {
-                    card_id: "29", name: "Sinistcha ex", hp: 240, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], types: ["Grass"],
-                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Re-Brew", cost: ["Colorless"], base_damage: 40, text: "Put 2 damage counters for each Energy in discard." },
-                        { name: "Matcha Splash", cost: ["Grass", "Colorless"], base_damage: 120, text: "Heal 30 damage from each of your Pokémon." }
-                    ]
-                },
-                {
-                    card_id: "30", name: "Magcargo ex", hp: 270, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], types: ["Fire"],
-                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 3,
-                    attacks: [
-                        { name: "Hot Magma", cost: ["Fire", "Colorless"], base_damage: 70, text: "Your opponent's Active Pokémon is now Burned." },
-                        { name: "Ground Burn", cost: ["Fire", "Fire", "Colorless"], base_damage: 140, text: "Discard the top card of each player's deck." }
-                    ]
-                },
-                {
-                    card_id: "31", name: "Ninetales", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Fire"],
-                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Will-O-Wisp", cost: ["Fire"], base_damage: 40, text: "Burns the target." },
-                        { name: "Fire Blast", cost: ["Fire", "Fire", "Colorless"], base_damage: 110, text: "Deals 110 fire damage." }
-                    ]
-                },
-                {
-                    card_id: "37", name: "Tyranitar ex", hp: 230, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Lightning"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 3,
-                    attacks: [
-                        { name: "Volt Cyclone", cost: ["Lightning", "Colorless", "Colorless"], base_damage: 140, text: "Move an Energy from this Pokémon to Bench." }
-                    ]
-                },
-                {
-                    card_id: "40", name: "Greninja ex", hp: 310, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Fighting"],
-                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Shinobi Blade", cost: ["Water"], base_damage: 170, text: "Search deck for any 1 card and put into hand." },
-                        { name: "Mirage Barrage", cost: ["Water", "Colorless", "Colorless"], base_damage: 120, text: "120 damage to 2 opponent Pokémon." }
-                    ]
-                },
-                {
-                    card_id: "41", name: "Lucario", hp: 140, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Fighting"],
-                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Aura Sphere", cost: ["Fighting"], base_damage: 60, text: "Deals 60 damage to opponent." },
-                        { name: "Close Combat", cost: ["Fighting", "Fighting", "Colorless"], base_damage: 130, text: "Deals 130 Fighting damage." }
-                    ]
-                },
-                {
-                    card_id: "44", name: "Snorlax ex", hp: 260, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Colorless"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 4,
-                    attacks: [
-                        { name: "Heavy Slam", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 140, text: "Massive body slam." },
-                        { name: "Hyper Beam", cost: ["Colorless", "Colorless", "Colorless", "Colorless"], base_damage: 200, text: "Devastating hyper beam attack." }
-                    ]
-                },
-                {
-                    card_id: "46", name: "Arcanine ex", hp: 230, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], types: ["Fire"],
-                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Heat Blast", cost: ["Fire", "Colorless"], base_damage: 60, text: "Deals 60 damage." },
-                        { name: "Raging Inferno", cost: ["Fire", "Fire", "Colorless"], base_damage: 260, text: "Devastating 260 fire explosion." }
-                    ]
-                },
-                {
-                    card_id: "49", name: "Feraligatr", hp: 180, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Water"],
-                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 3,
-                    attacks: [
-                        { name: "Giant Wave", cost: ["Water", "Water"], base_damage: 160, text: "Massive 160 water tsunami attack." }
-                    ]
-                },
-                {
-                    card_id: "51", name: "Palafin", hp: 150, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Water"],
-                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Vanguard Punch", cost: ["Water"], base_damage: 130, text: "Deals 130 damage." },
-                        { name: "Double Hit", cost: ["Water", "Colorless", "Colorless"], base_damage: 90, text: "Flip 2 coins. 90 for each heads." }
-                    ]
-                },
-                {
-                    card_id: "56", name: "Gengar", hp: 130, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Psychic"],
-                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Shadow Ball", cost: ["Psychic", "Colorless"], base_damage: 90, text: "Put 2 damage counters on opponent's bench." }
-                    ]
-                },
-                {
-                    card_id: "58", name: "Machamp", hp: 150, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Fighting"],
-                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 3,
-                    attacks: [
-                        { name: "Dynamic Punch", cost: ["Fighting", "Fighting", "Colorless", "Colorless"], base_damage: 160, text: "Deals 160 brute damage." }
-                    ]
-                },
-                {
-                    card_id: "61", name: "Salamence", hp: 150, supertype: "Pokémon", subtypes: ["Stage 2"], types: ["Darkness"],
-                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Speed Wing", cost: ["Darkness", "Colorless", "Colorless"], base_damage: 120, text: "High speed dark wing strike." }
-                    ]
-                },
-                {
-                    card_id: "62", name: "Koraidon", hp: 140, supertype: "Pokémon", subtypes: ["Basic"], types: ["Dragon"],
-                    weaknesses: [], retreat: 2,
-                    attacks: [
-                        { name: "Shred", cost: ["Fire", "Fighting", "Colorless"], base_damage: 130, text: "Damage ignores effects on active Pokémon." }
-                    ]
-                },
-                {
-                    card_id: "63", name: "Dragonite ex", hp: 250, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Dragon"],
-                    weaknesses: [], retreat: 2,
-                    attacks: [
-                        { name: "Dragon Pulse", cost: ["Lightning", "Fighting"], base_damage: 160, text: "Deals 160 draconic damage." }
-                    ]
-                },
-                {
-                    card_id: "75", name: "Venusaur ex", hp: 240, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Grass"],
-                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Giant Bloom", cost: ["Grass", "Grass", "Colorless"], base_damage: 180, text: "Deals 180 solar bloom damage and heals 30 HP." }
-                    ]
-                },
-                {
-                    card_id: "79", name: "Incineroar ex", hp: 320, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Fire"],
-                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Blaze Blast", cost: ["Fire", "Colorless", "Colorless", "Colorless"], base_damage: 240, text: "Your opponent's Active Pokémon is now Burned." }
-                    ]
-                },
-                {
-                    card_id: "80", name: "Alakazam ex", hp: 220, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Psychic"],
-                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Psychic", cost: ["Psychic", "Colorless", "Colorless"], base_damage: 130, text: "Deals 130 psychic wave damage." }
-                    ]
-                },
-                {
-                    card_id: "101", name: "Charizard ex", hp: 330, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Fire"],
-                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Burning Darkness", cost: ["Fire", "Fire"], base_damage: 180, text: "Deals 180 damage plus 30 for each Prize taken." },
-                        { name: "Slash", cost: ["Colorless"], base_damage: 60, text: "Quick slashing claws." }
-                    ]
-                },
-                {
-                    card_id: "102", name: "Charmander", hp: 70, supertype: "Pokémon", subtypes: ["Basic"], types: ["Fire"],
+                    card_id: "102", name: "Charmander", hp: 70, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Fire"],
                     weaknesses: [{ type: "Water", value: "x2" }], retreat: 1,
                     attacks: [
                         { name: "Scratch", cost: ["Colorless"], base_damage: 10, text: "Scratches target." },
@@ -2099,68 +1934,338 @@ HTML_DASHBOARD_CONTENT = """
                     ]
                 },
                 {
-                    card_id: "103", name: "Pidgeot ex", hp: 280, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], types: ["Colorless"],
-                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 0,
-                    attacks: [
-                        { name: "Blustery Wind", cost: ["Colorless", "Colorless"], base_damage: 120, text: "Discards any Stadium in play." }
-                    ]
-                },
-                {
-                    card_id: "104", name: "Miraidon ex", hp: 220, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Lightning"],
+                    card_id: "105b", name: "Pikachu", hp: 60, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Lightning"],
                     weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 1,
                     attacks: [
-                        { name: "Photon Blaster", cost: ["Lightning", "Lightning", "Colorless"], base_damage: 220, text: "Massive photon beam strike." }
+                        { name: "Gnaw", cost: ["Colorless"], base_damage: 10, text: "Gnaws target." },
+                        { name: "Thunder Jolt", cost: ["Lightning", "Colorless"], base_damage: 40, text: "Flips coin. If tails, Pikachu does 10 damage to itself." }
                     ]
                 },
                 {
-                    card_id: "105", name: "Raichu", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Lightning"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 1,
-                    attacks: [
-                        { name: "Thunderbolt", cost: ["Lightning", "Lightning", "Colorless"], base_damage: 120, text: "Discard all Energy from this Pokémon." }
-                    ]
-                },
-                {
-                    card_id: "106", name: "Zapdos", hp: 120, supertype: "Pokémon", subtypes: ["Basic"], types: ["Lightning"],
-                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 2,
-                    attacks: [
-                        { name: "Thunder", cost: ["Lightning", "Lightning", "Colorless"], base_damage: 90, text: "Deals 90 damage." }
-                    ]
-                },
-                {
-                    card_id: "107", name: "Eevee", hp: 50, supertype: "Pokémon", subtypes: ["Basic"], types: ["Colorless"],
+                    card_id: "107", name: "Eevee", hp: 50, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Colorless"],
                     weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 1,
                     attacks: [
                         { name: "Quick Attack", cost: ["Colorless"], base_damage: 30, text: "Flip a coin. If heads, does +20." }
                     ]
                 },
                 {
-                    card_id: "108", name: "Glaceon", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Water"],
-                    weaknesses: [{ type: "Metal", value: "x2" }], retreat: 1,
+                    card_id: "111", name: "Snorlax", hp: 150, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Colorless"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 4,
                     attacks: [
-                        { name: "Icicle Missile", cost: ["Water", "Colorless"], base_damage: 70, text: "Shoots icicles." }
+                        { name: "Heavy Impact", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 130, text: "Heavy body slam." }
                     ]
                 },
                 {
-                    card_id: "109", name: "Mewtwo ex", hp: 220, supertype: "Pokémon", subtypes: ["Basic", "ex"], types: ["Psychic"],
+                    card_id: "103b", name: "Pidgey", hp: 60, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Colorless"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Gust", cost: ["Colorless"], base_damage: 20, text: "Summons a gust of wind." }
+                    ]
+                },
+                {
+                    card_id: "27b", name: "Bulbasaur", hp: 70, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Leech Seed", cost: ["Grass", "Colorless"], base_damage: 20, text: "Heals 10 damage from Bulbasaur." }
+                    ]
+                },
+                {
+                    card_id: "37b", name: "Larvitar", hp: 70, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Fighting"],
+                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Rock Throw", cost: ["Fighting"], base_damage: 20, text: "Throws small rocks." }
+                    ]
+                },
+                {
+                    card_id: "104", name: "Miraidon ex", hp: 220, supertype: "Pokémon", subtypes: ["Basic", "ex"], stage: "Basic", evolves_from: null, types: ["Lightning"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Photon Blaster", cost: ["Lightning", "Lightning", "Colorless"], base_damage: 220, text: "Massive photon beam strike." }
+                    ]
+                },
+                {
+                    card_id: "106", name: "Zapdos", hp: 120, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Lightning"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Thunder", cost: ["Lightning", "Lightning", "Colorless"], base_damage: 90, text: "Deals 90 damage." }
+                    ]
+                },
+                {
+                    card_id: "109", name: "Mewtwo ex", hp: 220, supertype: "Pokémon", subtypes: ["Basic", "ex"], stage: "Basic", evolves_from: null, types: ["Psychic"],
                     weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 2,
                     attacks: [
                         { name: "Psystrike", cost: ["Psychic", "Psychic", "Colorless"], base_damage: 150, text: "Unleashes telekinetic psychic burst." }
                     ]
                 },
                 {
-                    card_id: "110", name: "Lucario", hp: 130, supertype: "Pokémon", subtypes: ["Stage 1"], types: ["Fighting"],
-                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 2,
+                    card_id: "62", name: "Koraidon", hp: 140, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Dragon"],
+                    weaknesses: [], retreat: 2,
                     attacks: [
-                        { name: "Aura Sphere", cost: ["Fighting", "Colorless"], base_damage: 110, text: "Concentrated fighting aura." }
+                        { name: "Shred", cost: ["Fire", "Fighting", "Colorless"], base_damage: 130, text: "Damage ignores effects on active Pokémon." }
                     ]
                 },
                 {
-                    card_id: "111", name: "Snorlax", hp: 150, supertype: "Pokémon", subtypes: ["Basic"], types: ["Colorless"],
-                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 4,
+                    card_id: "24", name: "Kangaskhan ex", hp: 230, supertype: "Pokémon", subtypes: ["Basic", "ex"], stage: "Basic", evolves_from: null, types: ["Colorless"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 2,
                     attacks: [
-                        { name: "Heavy Impact", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 130, text: "Heavy body slam." }
+                        { name: "Comet Punch", cost: ["Colorless", "Colorless"], base_damage: 60, text: "Flip 4 coins. 30 damage for each heads." },
+                        { name: "Wicked Impact", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 120, text: "Deals 120 damage to opponent." }
                     ]
                 },
+                {
+                    card_id: "44", name: "Snorlax ex", hp: 260, supertype: "Pokémon", subtypes: ["Basic", "ex"], stage: "Basic", evolves_from: null, types: ["Colorless"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 4,
+                    attacks: [
+                        { name: "Heavy Slam", cost: ["Colorless", "Colorless", "Colorless"], base_damage: 140, text: "Massive body slam." },
+                        { name: "Hyper Beam", cost: ["Colorless", "Colorless", "Colorless", "Colorless"], base_damage: 200, text: "Devastating hyper beam attack." }
+                    ]
+                },
+                {
+                    card_id: "squirtle-01", name: "Squirtle", hp: 60, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Water"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Water Gun", cost: ["Water"], base_damage: 20, text: "Shoots water at target." },
+                        { name: "Bubble", cost: ["Water", "Colorless"], base_damage: 20, text: "Flip coin. If heads, opponent is Paralyzed." }
+                    ]
+                },
+                {
+                    card_id: "machop-01", name: "Machop", hp: 70, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Fighting"],
+                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Low Kick", cost: ["Fighting"], base_damage: 20, text: "Low kick attack." },
+                        { name: "Karate Chop", cost: ["Fighting", "Colorless"], base_damage: 40, text: "Chops target." }
+                    ]
+                },
+                {
+                    card_id: "geodude-01", name: "Geodude", hp: 70, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Fighting"],
+                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Tackle", cost: ["Colorless"], base_damage: 10, text: "Tackles target." },
+                        { name: "Rock Throw", cost: ["Fighting", "Colorless"], base_damage: 30, text: "Throws rocks." }
+                    ]
+                },
+                {
+                    card_id: "abra-01", name: "Abra", hp: 50, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Psychic"],
+                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Teleport", cost: ["Psychic"], base_damage: 10, text: "Switches with a benched Pokémon." },
+                        { name: "Psyshot", cost: ["Psychic", "Colorless"], base_damage: 30, text: "Shoots psychic energy." }
+                    ]
+                },
+                {
+                    card_id: "meowth-01", name: "Meowth", hp: 60, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Colorless"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Pay Day", cost: ["Colorless"], base_damage: 10, text: "Draw a card." },
+                        { name: "Fury Swipes", cost: ["Colorless", "Colorless"], base_damage: 30, text: "Flip 3 coins. 10 damage for each heads." }
+                    ]
+                },
+                {
+                    card_id: "gastly-01", name: "Gastly", hp: 50, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Psychic"],
+                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Lick", cost: ["Psychic"], base_damage: 10, text: "Flip coin. If heads, opponent is Paralyzed." },
+                        { name: "Night Shade", cost: ["Psychic", "Colorless"], base_damage: 30, text: "Shadow attack." }
+                    ]
+                },
+                {
+                    card_id: "psyduck-01", name: "Psyduck", hp: 60, supertype: "Pokémon", subtypes: ["Basic"], stage: "Basic", evolves_from: null, types: ["Water"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Headache", cost: ["Colorless"], base_damage: 10, text: "Confuses opponent." },
+                        { name: "Water Drip", cost: ["Water", "Colorless"], base_damage: 20, text: "Drips water on foe." }
+                    ]
+                },
+
+                // --- STAGE 1 EVOLUTION POKÉMON ---
+                {
+                    card_id: "102b", name: "Charmeleon", hp: 90, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Charmander", types: ["Fire"],
+                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Flamethrower", cost: ["Fire", "Fire"], base_damage: 70, text: "Discard 1 Energy from this Pokémon." },
+                        { name: "Slash", cost: ["Colorless", "Colorless"], base_damage: 40, text: "Slashes the target." }
+                    ]
+                },
+                {
+                    card_id: "103c", name: "Pidgeotto", hp: 80, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Pidgey", types: ["Colorless"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Wing Attack", cost: ["Colorless", "Colorless"], base_damage: 40, text: "Strikes target with sharp wings." }
+                    ]
+                },
+                {
+                    card_id: "27c", name: "Ivysaur", hp: 90, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Bulbasaur", types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Razor Leaf", cost: ["Grass", "Colorless"], base_damage: 50, text: "Launches razor-sharp leaves." }
+                    ]
+                },
+                {
+                    card_id: "37c", name: "Pupitar", hp: 90, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Larvitar", types: ["Fighting"],
+                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Tackle", cost: ["Fighting", "Colorless"], base_damage: 40, text: "Hard shell tackle." }
+                    ]
+                },
+                {
+                    card_id: "105", name: "Raichu", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Pikachu", types: ["Lightning"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Thunderbolt", cost: ["Lightning", "Lightning", "Colorless"], base_damage: 120, text: "Discard all Energy from this Pokémon." }
+                    ]
+                },
+                {
+                    card_id: "26", name: "Leafeon", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Eevee", types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Leaflet Blessings", cost: ["Colorless"], base_damage: 0, text: "Attach a Grass Energy from hand to bench." },
+                        { name: "Solar Beam", cost: ["Grass", "Colorless"], base_damage: 70, text: "Deals 70 Grass damage." }
+                    ]
+                },
+                {
+                    card_id: "108", name: "Glaceon", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Eevee", types: ["Water"],
+                    weaknesses: [{ type: "Metal", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Icicle Missile", cost: ["Water", "Colorless"], base_damage: 70, text: "Shoots icicles." }
+                    ]
+                },
+                {
+                    card_id: "41", name: "Lucario", hp: 140, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Riolu", types: ["Fighting"],
+                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Aura Sphere", cost: ["Fighting"], base_damage: 60, text: "Deals 60 damage to opponent." },
+                        { name: "Close Combat", cost: ["Fighting", "Fighting", "Colorless"], base_damage: 130, text: "Deals 130 Fighting damage." }
+                    ]
+                },
+                {
+                    card_id: "31", name: "Ninetales", hp: 120, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Vulpix", types: ["Fire"],
+                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Will-O-Wisp", cost: ["Fire"], base_damage: 40, text: "Burns the target." },
+                        { name: "Fire Blast", cost: ["Fire", "Fire", "Colorless"], base_damage: 110, text: "Deals 110 fire damage." }
+                    ]
+                },
+                {
+                    card_id: "30", name: "Magcargo ex", hp: 270, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], stage: "Stage 1", evolves_from: "Slugma", types: ["Fire"],
+                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 3,
+                    attacks: [
+                        { name: "Hot Magma", cost: ["Fire", "Colorless"], base_damage: 70, text: "Your opponent's Active Pokémon is now Burned." },
+                        { name: "Ground Burn", cost: ["Fire", "Fire", "Colorless"], base_damage: 140, text: "Discard the top card of each player's deck." }
+                    ]
+                },
+                {
+                    card_id: "29", name: "Sinistcha ex", hp: 240, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], stage: "Stage 1", evolves_from: "Poltchageist", types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Re-Brew", cost: ["Colorless"], base_damage: 40, text: "Put 2 damage counters for each Energy in discard." },
+                        { name: "Matcha Splash", cost: ["Grass", "Colorless"], base_damage: 120, text: "Heal 30 damage from each of your Pokémon." }
+                    ]
+                },
+                {
+                    card_id: "46", name: "Arcanine ex", hp: 230, supertype: "Pokémon", subtypes: ["Stage 1", "ex"], stage: "Stage 1", evolves_from: "Growlithe", types: ["Fire"],
+                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Heat Blast", cost: ["Fire", "Colorless"], base_damage: 60, text: "Deals 60 damage." },
+                        { name: "Raging Inferno", cost: ["Fire", "Fire", "Colorless"], base_damage: 260, text: "Devastating 260 fire explosion." }
+                    ]
+                },
+                {
+                    card_id: "51", name: "Palafin", hp: 150, supertype: "Pokémon", subtypes: ["Stage 1"], stage: "Stage 1", evolves_from: "Finizen", types: ["Water"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Vanguard Punch", cost: ["Water"], base_damage: 130, text: "Deals 130 damage." },
+                        { name: "Double Hit", cost: ["Water", "Colorless", "Colorless"], base_damage: 90, text: "Flip 2 coins. 90 for each heads." }
+                    ]
+                },
+
+                // --- STAGE 2 EVOLUTION POKÉMON ---
+                {
+                    card_id: "101", name: "Charizard ex", hp: 330, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Charmeleon", types: ["Fire"],
+                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Burning Darkness", cost: ["Fire", "Fire"], base_damage: 180, text: "Deals 180 damage plus 30 for each Prize taken." },
+                        { name: "Slash", cost: ["Colorless"], base_damage: 60, text: "Quick slashing claws." }
+                    ]
+                },
+                {
+                    card_id: "103", name: "Pidgeot ex", hp: 280, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Pidgeotto", types: ["Colorless"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 0,
+                    attacks: [
+                        { name: "Blustery Wind", cost: ["Colorless", "Colorless"], base_damage: 120, text: "Discards any Stadium in play." }
+                    ]
+                },
+                {
+                    card_id: "75", name: "Venusaur ex", hp: 240, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Ivysaur", types: ["Grass"],
+                    weaknesses: [{ type: "Fire", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Giant Bloom", cost: ["Grass", "Grass", "Colorless"], base_damage: 180, text: "Deals 180 solar bloom damage and heals 30 HP." }
+                    ]
+                },
+                {
+                    card_id: "37", name: "Tyranitar ex", hp: 230, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Pupitar", types: ["Lightning"],
+                    weaknesses: [{ type: "Fighting", value: "x2" }], retreat: 3,
+                    attacks: [
+                        { name: "Volt Cyclone", cost: ["Lightning", "Colorless", "Colorless"], base_damage: 140, text: "Move an Energy from this Pokémon to Bench." }
+                    ]
+                },
+                {
+                    card_id: "40", name: "Greninja ex", hp: 310, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Frogadier", types: ["Fighting"],
+                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Shinobi Blade", cost: ["Water"], base_damage: 170, text: "Search deck for any 1 card and put into hand." },
+                        { name: "Mirage Barrage", cost: ["Water", "Colorless", "Colorless"], base_damage: 120, text: "120 damage to 2 opponent Pokémon." }
+                    ]
+                },
+                {
+                    card_id: "49", name: "Feraligatr", hp: 180, supertype: "Pokémon", subtypes: ["Stage 2"], stage: "Stage 2", evolves_from: "Croconaw", types: ["Water"],
+                    weaknesses: [{ type: "Lightning", value: "x2" }], retreat: 3,
+                    attacks: [
+                        { name: "Giant Wave", cost: ["Water", "Water"], base_damage: 160, text: "Massive 160 water tsunami attack." }
+                    ]
+                },
+                {
+                    card_id: "56", name: "Gengar", hp: 130, supertype: "Pokémon", subtypes: ["Stage 2"], stage: "Stage 2", evolves_from: "Haunter", types: ["Psychic"],
+                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Shadow Ball", cost: ["Psychic", "Colorless"], base_damage: 90, text: "Put 2 damage counters on opponent's bench." }
+                    ]
+                },
+                {
+                    card_id: "58", name: "Machamp", hp: 150, supertype: "Pokémon", subtypes: ["Stage 2"], stage: "Stage 2", evolves_from: "Machoke", types: ["Fighting"],
+                    weaknesses: [{ type: "Psychic", value: "x2" }], retreat: 3,
+                    attacks: [
+                        { name: "Dynamic Punch", cost: ["Fighting", "Fighting", "Colorless", "Colorless"], base_damage: 160, text: "Deals 160 brute damage." }
+                    ]
+                },
+                {
+                    card_id: "61", name: "Salamence", hp: 150, supertype: "Pokémon", subtypes: ["Stage 2"], stage: "Stage 2", evolves_from: "Shelgon", types: ["Darkness"],
+                    weaknesses: [{ type: "Grass", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Speed Wing", cost: ["Darkness", "Colorless", "Colorless"], base_damage: 120, text: "High speed dark wing strike." }
+                    ]
+                },
+                {
+                    card_id: "63", name: "Dragonite ex", hp: 250, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Dragonair", types: ["Dragon"],
+                    weaknesses: [], retreat: 2,
+                    attacks: [
+                        { name: "Dragon Pulse", cost: ["Lightning", "Fighting"], base_damage: 160, text: "Deals 160 draconic damage." }
+                    ]
+                },
+                {
+                    card_id: "79", name: "Incineroar ex", hp: 320, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Torracat", types: ["Fire"],
+                    weaknesses: [{ type: "Water", value: "x2" }], retreat: 2,
+                    attacks: [
+                        { name: "Blaze Blast", cost: ["Fire", "Colorless", "Colorless", "Colorless"], base_damage: 240, text: "Your opponent's Active Pokémon is now Burned." }
+                    ]
+                },
+                {
+                    card_id: "80", name: "Alakazam ex", hp: 220, supertype: "Pokémon", subtypes: ["Stage 2", "ex"], stage: "Stage 2", evolves_from: "Kadabra", types: ["Psychic"],
+                    weaknesses: [{ type: "Darkness", value: "x2" }], retreat: 1,
+                    attacks: [
+                        { name: "Psychic", cost: ["Psychic", "Colorless", "Colorless"], base_damage: 130, text: "Deals 130 psychic wave damage." }
+                    ]
+                },
+
                 // TRAINERS
                 { card_id: "201", name: "Professor's Research", supertype: "Trainer", subtypes: ["Supporter"], effects: [{ text: "Discard your hand and draw 7 cards." }] },
                 { card_id: "202", name: "Boss's Orders", supertype: "Trainer", subtypes: ["Supporter"], effects: [{ text: "Switch 1 of your opponent's Benched Pokémon to Active Spot." }] },
@@ -2182,14 +2287,69 @@ HTML_DASHBOARD_CONTENT = """
             ];
 
             // Global State
+            // Global State
             const ALL_CARDS_MAP = {};
             DATASET_CARDS.forEach(c => {
                 ALL_CARDS_MAP[c.name.toLowerCase()] = c;
                 ALL_CARDS_MAP[c.card_id] = c;
             });
 
-            let CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
-            let OPPONENT_4_CARDS = ["Miraidon ex", "Tyranitar ex", "Raichu", "Zapdos"];
+            function getMeta(cname) {
+                if (!cname) return { name: "Unknown", hp: 100, types: ["Normal"], attacks: [] };
+                const clean = cname.toLowerCase().trim();
+                return ALL_CARDS_MAP[clean] || { name: cname, hp: 100, types: ["Normal"], attacks: [{ name: "Strike", base_damage: 60 }] };
+            }
+
+            // ================= OFFICIAL FISHER-YATES (KNUTH) SHUFFLE ALGORITHM =================
+            function fisherYatesShuffle(array) {
+                const arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    const temp = arr[i];
+                    arr[i] = arr[j];
+                    arr[j] = temp;
+                }
+                return arr;
+            }
+
+            // Helper to strictly identify Basic Pokémon
+            function isBasicPokemon(c) {
+                if (!c) return false;
+                const m = typeof c === 'string' ? getMeta(c) : c;
+                const stype = (m.supertype || '').toLowerCase();
+                const subs = (m.subtypes || []).map(s => s.toLowerCase());
+                const stage = (m.stage || '').toLowerCase();
+                return stype.includes('pok') && (stage === 'basic' || subs.includes('basic')) && !subs.includes('stage 1') && !subs.includes('stage 2');
+            }
+
+            // Randomly select N distinct Basic Pokémon using Fisher-Yates
+            function getRandomBasicPokemon(count = 4, excludeNames = []) {
+                const excludeSet = new Set((excludeNames || []).map(n => (n || '').toLowerCase().trim()));
+                const basicCards = DATASET_CARDS.filter(c => isBasicPokemon(c) && !excludeSet.has((c.name || '').toLowerCase().trim()));
+                const shuffled = fisherYatesShuffle(basicCards);
+                const selected = [];
+                const seen = new Set();
+                for (const c of shuffled) {
+                    const name = c.name;
+                    if (!seen.has(name)) {
+                        seen.add(name);
+                        selected.push(name);
+                        if (selected.length >= count) break;
+                    }
+                }
+                const fallbacks = ["Pikachu", "Charmander", "Squirtle", "Bulbasaur", "Eevee", "Pidgey", "Abra", "Machop", "Meowth", "Gastly", "Geodude", "Psyduck", "Larvitar", "Miraidon ex", "Zapdos", "Mewtwo ex"];
+                for (const fb of fallbacks) {
+                    if (selected.length >= count) break;
+                    if (!seen.has(fb) && !excludeSet.has(fb.toLowerCase())) {
+                        seen.add(fb);
+                        selected.push(fb);
+                    }
+                }
+                return selected.slice(0, count);
+            }
+
+            let CHOSEN_4_CARDS = getRandomBasicPokemon(4);
+            let OPPONENT_4_CARDS = getRandomBasicPokemon(4, CHOSEN_4_CARDS);
             let CURRENT_MATCH_STATE = null;
             let LATEST_AI_REC = null;
             let CUSTOM_DECK = {};
@@ -2197,12 +2357,6 @@ HTML_DASHBOARD_CONTENT = """
             let CURRENT_PREVIEW_ARCHETYPE = 'charizard-ex-pidgeot';
             let IS_AI_PROCESSING = false;
             let PKMN_DISPLAY_LIMIT = 30;
-
-            function getMeta(cname) {
-                if (!cname) return { name: "Unknown", hp: 100, types: ["Normal"], attacks: [] };
-                const clean = cname.toLowerCase().trim();
-                return ALL_CARDS_MAP[clean] || { name: cname, hp: 100, types: ["Normal"], attacks: [{ name: "Strike", base_damage: 60 }] };
-            }
 
             function getApiKey() {
                 return 'tcg-live-secret-key-2026';
@@ -2252,6 +2406,11 @@ HTML_DASHBOARD_CONTENT = """
             }
 
             function chooseCardFor4Slot(cname) {
+                const meta = getMeta(cname);
+                if (!isBasicPokemon(meta)) {
+                    alert(`❌ Invalid Selection: Only Basic Pokémon can be chosen for starting slots!\n\n'${cname}' is a ${meta.stage || 'Stage 1/2'} Pokémon and must be evolved onto a field Pokémon during gameplay.`);
+                    return;
+                }
                 let idx = CHOSEN_4_CARDS.indexOf(cname);
                 if (idx !== -1) {
                     alert(`ℹ️ '${cname}' is already selected in Slot #${idx+1}.`);
@@ -2260,18 +2419,17 @@ HTML_DASHBOARD_CONTENT = """
                 CHOSEN_4_CARDS.shift();
                 CHOSEN_4_CARDS.push(cname);
                 updateChosen4CardsUI();
-                alert(`✨ Added '${cname}' to your 4-Card Battle Deck! Current cards:\n1. ${CHOSEN_4_CARDS[0]}\n2. ${CHOSEN_4_CARDS[1]}\n3. ${CHOSEN_4_CARDS[2]}\n4. ${CHOSEN_4_CARDS[3]}`);
+                alert(`✨ Added Basic Pokémon '${cname}' to Slot #4! Current cards:\n1. ${CHOSEN_4_CARDS[0]} (Active)\n2. ${CHOSEN_4_CARDS[1]} (Bench 1)\n3. ${CHOSEN_4_CARDS[2]} (Bench 2)\n4. ${CHOSEN_4_CARDS[3]} (Bench 3)`);
             }
 
             function dealRandom4Cards() {
-                const pokemons = DATASET_CARDS.filter(c => (c.supertype || '').toLowerCase().includes('pok'));
-                const shuffled = [...pokemons].sort(() => 0.5 - Math.random());
-                CHOSEN_4_CARDS = shuffled.slice(0, 4).map(c => c.name);
+                CHOSEN_4_CARDS = getRandomBasicPokemon(4);
                 updateChosen4CardsUI();
+                alert(`🎲 Randomly dealt 4 Basic Pokémon using Fisher-Yates Shuffle:\n1. ${CHOSEN_4_CARDS[0]}\n2. ${CHOSEN_4_CARDS[1]}\n3. ${CHOSEN_4_CARDS[2]}\n4. ${CHOSEN_4_CARDS[3]}`);
             }
 
             function resetChosen4Cards() {
-                CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
+                CHOSEN_4_CARDS = getRandomBasicPokemon(4);
                 updateChosen4CardsUI();
             }
 
@@ -2280,11 +2438,16 @@ HTML_DASHBOARD_CONTENT = """
                     alert("⚠️ Please pick 4 cards first!");
                     return;
                 }
-                const oppPool = DATASET_CARDS.filter(c => (c.supertype || '').toLowerCase().includes('pok') && !CHOSEN_4_CARDS.includes(c.name));
-                const oppShuffled = [...oppPool].sort(() => 0.5 - Math.random());
-                OPPONENT_4_CARDS = oppShuffled.slice(0, 4).map(c => c.name);
+                // Verify all chosen cards are Basic
+                const invalid = CHOSEN_4_CARDS.filter(c => !isBasicPokemon(c));
+                if (invalid.length > 0) {
+                    alert(`❌ Cannot start battle: Slot cards [${invalid.join(', ')}] are not Basic Pokémon! All 4 starting slots require Basic Pokémon.`);
+                    return;
+                }
+                // Opponent receives independent random 4 Basic Pokémon
+                OPPONENT_4_CARDS = getRandomBasicPokemon(4, CHOSEN_4_CARDS);
 
-                startNewMatch();
+                startNewMatch(true); // Preserve user's selected 4 cards
                 switchMode('match');
             }
 
@@ -2294,16 +2457,30 @@ HTML_DASHBOARD_CONTENT = """
                 (cardNames || []).forEach(n => {
                     for (let i = 0; i < 3; i++) deck.push(n);
                 });
-                const trainers = ["Professor's Research", "Boss's Orders", "Arven", "Iono", "Ultra Ball", "Nest Ball", "Rare Candy", "Switch"];
-                trainers.forEach(t => {
-                    for (let i = 0; i < 3; i++) deck.push(t);
+                const evolutions = [
+                    "Charmeleon", "Charizard ex", "Raichu", "Pidgeotto", "Pidgeot ex",
+                    "Ivysaur", "Venusaur ex", "Pupitar", "Tyranitar ex", "Leafeon", "Glaceon",
+                    "Alakazam ex", "Gengar", "Dragonite ex", "Lucario", "Machamp"
+                ];
+                evolutions.forEach(p => {
+                    if (deck.length < 28 && ALL_CARDS_MAP[p.toLowerCase()]) {
+                        deck.push(p);
+                    }
                 });
+                const trainers = ["Professor's Research", "Boss's Orders", "Arven", "Iono", "Ultra Ball", "Nest Ball", "Rare Candy", "Switch", "Super Rod", "Prime Catcher"];
+                trainers.forEach(t => {
+                    for (let i = 0; i < 2; i++) {
+                        if (deck.length < 44) deck.push(t);
+                    }
+                });
+                const energyTypes = ["Basic Fire Energy", "Basic Lightning Energy", "Basic Water Energy", "Basic Psychic Energy", "Basic Fighting Energy", "Basic Grass Energy"];
+                let eIdx = 0;
                 while (deck.length < 60) {
-                    deck.push("Basic Fire Energy");
-                    if (deck.length < 60) deck.push("Basic Lightning Energy");
-                    if (deck.length < 60) deck.push("Basic Water Energy");
+                    deck.push(energyTypes[eIdx % energyTypes.length]);
+                    eIdx++;
                 }
-                return deck.sort(() => 0.5 - Math.random());
+                // Randomly shuffle the complete 60 cards using Fisher-Yates
+                return fisherYatesShuffle(deck);
             }
 
             function extractBasicFromDeck(deck) {
@@ -2344,17 +2521,19 @@ HTML_DASHBOARD_CONTENT = """
                     const el = document.getElementById(id);
                     if (el) {
                         el.disabled = disabled;
-                        el.style.opacity = disabled ? '0.45' : '1';
-                        el.style.pointerEvents = disabled ? 'none' : 'auto';
+                        if (el.style) {
+                            el.style.opacity = disabled ? '0.45' : '1';
+                            el.style.pointerEvents = disabled ? 'none' : 'auto';
+                        }
                     }
                 });
                 document.querySelectorAll('.btn-play-hand-card').forEach(btn => {
                     btn.disabled = disabled;
-                    btn.style.opacity = disabled ? '0.45' : '1';
+                    if (btn.style) btn.style.opacity = disabled ? '0.45' : '1';
                 });
                 document.querySelectorAll('.btn-strike').forEach(btn => {
                     btn.disabled = disabled;
-                    btn.style.opacity = disabled ? '0.45' : '1';
+                    if (btn.style) btn.style.opacity = disabled ? '0.45' : '1';
                 });
             }
 
@@ -2367,7 +2546,18 @@ HTML_DASHBOARD_CONTENT = """
                 }
             }
 
-            function startNewMatch() {
+            function startNewMatch(keepPlayerCards = false) {
+                // If starting fresh or restarting (not preserving custom selection),
+                // randomly generate fresh 4 Basic Pokémon for the player
+                if (!keepPlayerCards) {
+                    CHOSEN_4_CARDS = getRandomBasicPokemon(4);
+                    updateChosen4CardsUI();
+                }
+
+                // Opponent independently gets 4 random Basic Pokémon
+                OPPONENT_4_CARDS = getRandomBasicPokemon(4, CHOSEN_4_CARDS);
+
+                // Build and Fisher-Yates shuffle the complete 60-card decks
                 const pDeck = build60CardDeck(CHOSEN_4_CARDS);
                 const oppDeck = build60CardDeck(OPPONENT_4_CARDS);
 
@@ -2376,6 +2566,7 @@ HTML_DASHBOARD_CONTENT = """
                 const pActiveMeta = getMeta(pActiveCard);
                 const oppActiveMeta = getMeta(oppActiveCard);
 
+                // Initial 4 cards drawn from the freshly shuffled 60-card deck
                 const pHand = [pDeck.pop(), pDeck.pop(), pDeck.pop(), pDeck.pop()];
                 const oppHand = [oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop()];
 
@@ -2430,7 +2621,7 @@ HTML_DASHBOARD_CONTENT = """
                     },
                     match_log: [
                         `⚔️ Esports Match Initialized: [${pActiveCard}] vs [${oppActiveCard}]!`,
-                        `🃏 60-Card decks shuffled. Initial 4-card hands drawn. 3-Knockout victory limit active.`,
+                        `🎲 60-Card decks shuffled with Fisher-Yates algorithm. Player & Opponent starting Pokémon randomized.`,
                         `=== START OF YOUR TURN 1 ===`
                     ]
                 };
@@ -2909,26 +3100,50 @@ HTML_DASHBOARD_CONTENT = """
 
                 // 3. Evolve Pokémon if matching evolution in hand
                 const oppActive = CURRENT_MATCH_STATE.opponent.active_spot;
-                const evoIdx = oppHand.findIndex(c => {
+                const oppBenchCards = CURRENT_MATCH_STATE.opponent.bench || [];
+                let evoTarget = null;
+                let isBenchEvo = false;
+                let evoIdx = -1;
+
+                for (let i = 0; i < oppHand.length; i++) {
+                    const c = oppHand[i];
                     const m = getMeta(typeof c === 'string' ? c : c.name);
                     const stype = (m.supertype || '').toLowerCase();
                     const subs = (m.subtypes || []).map(s => s.toLowerCase());
-                    const isEvo = stype.includes('pok') && (subs.includes('stage 1') || subs.includes('stage 2') || subs.includes('ex'));
-                    if (!isEvo) return false;
-                    if (m.evolves_from && oppActive.name.toLowerCase().includes(m.evolves_from.toLowerCase())) return true;
-                    return oppActive.name.toLowerCase().includes(m.name.toLowerCase().split(' ')[0]);
-                });
-                if (evoIdx !== -1) {
+                    const isEvo = stype.includes('pok') && (subs.includes('stage 1') || subs.includes('stage 2') || (m.stage && m.stage !== 'Basic'));
+                    if (!isEvo) continue;
+
+                    const ef = (m.evolves_from || '').toLowerCase();
+                    if (!ef) continue;
+
+                    // Check active spot
+                    if (oppActive && oppActive.name.toLowerCase().includes(ef)) {
+                        evoTarget = oppActive;
+                        isBenchEvo = false;
+                        evoIdx = i;
+                        break;
+                    }
+                    // Check bench
+                    const bMatch = oppBenchCards.find(b => b.name.toLowerCase().includes(ef));
+                    if (bMatch) {
+                        evoTarget = bMatch;
+                        isBenchEvo = true;
+                        evoIdx = i;
+                        break;
+                    }
+                }
+
+                if (evoIdx !== -1 && evoTarget) {
                     const eCard = oppHand.splice(evoIdx, 1)[0];
                     const eName = typeof eCard === 'string' ? eCard : eCard.name;
                     const em = getMeta(eName);
-                    const oldMax = oppActive.max_hp || 100;
-                    const newMax = em.hp || (oldMax + 60);
-                    oppActive.name = eName;
-                    oppActive.max_hp = newMax;
-                    oppActive.current_hp = Math.min(newMax, oppActive.current_hp + (newMax - oldMax));
-                    oppActive.card_id = em.card_id;
-                    CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent evolved Active Pokémon into [${eName}]! (HP: ${oppActive.current_hp}/${newMax}).`);
+                    const oldMax = evoTarget.max_hp || 100;
+                    const newMax = em.hp || (oldMax + 80);
+                    evoTarget.name = eName;
+                    evoTarget.max_hp = newMax;
+                    evoTarget.current_hp = Math.min(newMax, evoTarget.current_hp + (newMax - oldMax));
+                    evoTarget.card_id = em.card_id;
+                    CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent evolved ${isBenchEvo ? 'Benched' : 'Active'} [${em.evolves_from}] into [${eName}]! (HP: ${evoTarget.current_hp}/${newMax}).`);
                     updateAiStatusBanner(`🤖 OPPONENT AI: Evolved into [${eName}]!`);
                     updateMatchView(CURRENT_MATCH_STATE);
                     await sleep(750);
@@ -3117,11 +3332,13 @@ HTML_DASHBOARD_CONTENT = """
                     CURRENT_MATCH_STATE.match_log.push(`🛡️ Placed Basic Pokémon [${cname}] onto Bench.`);
                 }
                 // 2. Evolution Pokémon -> Active or Bench
-                else if (stype.includes('pok') && (subtypes.includes('stage 1') || subtypes.includes('stage 2') || subtypes.includes('ex'))) {
+                // 2. Evolution Pokémon (Stage 1 or Stage 2) -> Active or Bench
+                else if (stype.includes('pok') && (subtypes.includes('stage 1') || subtypes.includes('stage 2') || (meta.stage && meta.stage !== 'Basic'))) {
                     const evoFrom = (meta.evolves_from || '').toLowerCase();
                     const pActive = CURRENT_MATCH_STATE.player.active_spot;
                     let evolved = false;
 
+                    // Check Active Spot
                     if (evoFrom && pActive.name.toLowerCase().includes(evoFrom)) {
                         hand.splice(idx, 1);
                         const oldMax = pActive.max_hp || 100;
@@ -3133,6 +3350,7 @@ HTML_DASHBOARD_CONTENT = """
                         CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Active into [${cname}]! (HP: ${pActive.current_hp}/${newMax}).`);
                         evolved = true;
                     } else {
+                        // Check Bench
                         const bench = CURRENT_MATCH_STATE.player.bench || [];
                         for (let b of bench) {
                             if (evoFrom && b.name.toLowerCase().includes(evoFrom)) {
@@ -3143,26 +3361,51 @@ HTML_DASHBOARD_CONTENT = """
                                 b.max_hp = newMax;
                                 b.current_hp = Math.min(newMax, b.current_hp + (newMax - oldMax));
                                 b.card_id = meta.card_id;
-                                CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Benched Pokémon into [${cname}]!`);
+                                CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Benched Pokémon into [${cname}]! (HP: ${b.current_hp}/${newMax}).`);
                                 evolved = true;
                                 break;
                             }
                         }
                     }
 
-                    if (!evolved) {
-                        if (cname.toLowerCase().includes('charizard') && pActive.name.toLowerCase().includes('charmander')) {
-                            hand.splice(idx, 1);
-                            pActive.name = cname;
-                            pActive.max_hp = 330;
-                            pActive.current_hp = 330;
-                            pActive.card_id = meta.card_id;
-                            CURRENT_MATCH_STATE.match_log.push(`🔥 Super Evolved Active into [${cname}] (330 HP)!`);
+                    // Check Rare Candy exception if Stage 2
+                    if (!evolved && (subtypes.includes('stage 2') || meta.stage === 'Stage 2')) {
+                        const hasRareCandy = hand.some(c => (typeof c === 'string' ? c : c.name).toLowerCase().includes('rare candy'));
+                        let basicTarget = null;
+                        if (cname.toLowerCase().includes('charizard')) {
+                            if (pActive.name.toLowerCase().includes('charmander')) basicTarget = pActive;
+                            else basicTarget = (CURRENT_MATCH_STATE.player.bench || []).find(b => b.name.toLowerCase().includes('charmander'));
+                        } else if (cname.toLowerCase().includes('venusaur')) {
+                            if (pActive.name.toLowerCase().includes('bulbasaur')) basicTarget = pActive;
+                            else basicTarget = (CURRENT_MATCH_STATE.player.bench || []).find(b => b.name.toLowerCase().includes('bulbasaur'));
+                        } else if (cname.toLowerCase().includes('pidgeot')) {
+                            if (pActive.name.toLowerCase().includes('pidgey')) basicTarget = pActive;
+                            else basicTarget = (CURRENT_MATCH_STATE.player.bench || []).find(b => b.name.toLowerCase().includes('pidgey'));
+                        }
+
+                        if (hasRareCandy && basicTarget) {
+                            const rcIdx = hand.findIndex(c => (typeof c === 'string' ? c : c.name).toLowerCase().includes('rare candy'));
+                            const rcCard = hand.splice(rcIdx, 1)[0];
+                            CURRENT_MATCH_STATE.player.discard = CURRENT_MATCH_STATE.player.discard || [];
+                            CURRENT_MATCH_STATE.player.discard.push(typeof rcCard === 'string' ? rcCard : rcCard.name);
+                            hand.splice(idx > rcIdx ? idx - 1 : idx, 1);
+                            const oldMax = basicTarget.max_hp || 70;
+                            const newMax = meta.hp || (oldMax + 160);
+                            basicTarget.name = cname;
+                            basicTarget.max_hp = newMax;
+                            basicTarget.current_hp = Math.min(newMax, basicTarget.current_hp + (newMax - oldMax));
+                            basicTarget.card_id = meta.card_id;
+                            CURRENT_MATCH_STATE.match_log.push(`🍬 Played [Rare Candy]! Evolved [${basicTarget.name}] directly into Stage 2 [${cname}]!`);
                             evolved = true;
-                        } else {
-                            alert(`⚠️ No valid Pokémon on field to evolve into '${cname}'! Needs: ${meta.evolves_from || 'base Pokémon'}`);
+                        } else if (basicTarget && !hasRareCandy) {
+                            alert(`❌ Cannot Evolve directly: [${cname}] is a Stage 2 Pokémon! You must evolve into [${meta.evolves_from || 'Stage 1'}] first, or hold [Rare Candy] in hand.`);
                             return;
                         }
+                    }
+
+                    if (!evolved) {
+                        alert(`❌ Cannot Evolve: No valid '${meta.evolves_from || 'matching base'}' Pokémon on field to evolve into '${cname}'! Stage 1 & Stage 2 cards cannot be placed directly.`);
+                        return;
                     }
                 }
                 // 3. Energy Card -> Attach to Active (1 per turn)
@@ -3372,10 +3615,23 @@ HTML_DASHBOARD_CONTENT = """
                         `;
                     });
 
+                    const isBasic = isBasicPokemon(c);
+                    let evoBadge = '';
+                    if (c.stage === 'Stage 1' || (c.subtypes || []).includes('Stage 1')) {
+                        evoBadge = `<span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--neon-amber); background:rgba(255,184,0,0.1); border:1px solid var(--neon-amber); border-radius:3px; padding:2px 4px;">🧬 Stage 1 (from ${c.evolves_from || 'Basic'})</span>`;
+                    } else if (c.stage === 'Stage 2' || (c.subtypes || []).includes('Stage 2')) {
+                        evoBadge = `<span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--neon-magenta); background:rgba(255,0,128,0.1); border:1px solid var(--neon-magenta); border-radius:3px; padding:2px 4px;">🧬 Stage 2 (from ${c.evolves_from || 'Stage 1'})</span>`;
+                    } else if (isBasic) {
+                        evoBadge = `<span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--neon-green); background:rgba(0,255,136,0.1); border:1px solid var(--neon-green); border-radius:3px; padding:2px 4px;">🟢 Basic Pokémon</span>`;
+                    }
+
                     div.innerHTML = `
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">${c.subtypes ? c.subtypes.join(' • ') : c.supertype}</span>
+                                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                                    <span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">${c.subtypes ? c.subtypes.join(' • ') : c.supertype}</span>
+                                    ${evoBadge}
+                                </div>
                                 <span style="font-family:var(--font-orbitron); font-size:0.85rem; font-weight:900; color:#34d399;">${c.hp ? c.hp + ' HP' : ''}</span>
                             </div>
                             <div style="font-family:var(--font-orbitron); font-size:1rem; font-weight:900; color:#fff; margin:6px 0;">${c.name}</div>
@@ -3383,7 +3639,7 @@ HTML_DASHBOARD_CONTENT = """
                             ${attacksHtml}
                         </div>
                         <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-                            ${stype.includes('pok') ? `<button class="btn-cyber-sm btn-choose-4" style="flex:1; font-size:0.72rem; padding:6px 8px; text-align:center;">🎯 4-CARD BATTLE</button>` : ''}
+                            ${isBasic ? `<button class="btn-cyber-sm btn-choose-4" style="flex:1; font-size:0.72rem; padding:6px 8px; text-align:center;">🎯 CHOOSE FOR 4-CARD BATTLE</button>` : ''}
                             <button class="btn-cyber-sm btn-add-custom" style="flex:1; font-size:0.72rem; padding:6px 8px; background:rgba(0,255,136,0.15); border-color:var(--neon-green); color:var(--neon-green); text-align:center;">+ DECK BUILDER</button>
                         </div>
                     `;
@@ -3732,6 +3988,8 @@ HTML_DASHBOARD_CONTENT = """
             window.loadMorePokemon = loadMorePokemon;
             window.showAllPokemon = showAllPokemon;
             window.adjustCustomDeckCard = adjustCustomDeckCard;
+            window.fisherYatesShuffle = fisherYatesShuffle;
+            window.getRandomBasicPokemon = getRandomBasicPokemon;
             window.onload = initApp;
         </script>
     </body>

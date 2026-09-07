@@ -136,5 +136,167 @@ class TestPokemonTcgGameAndAi(unittest.TestCase):
         self.assertIn("loadTop60RecommendedDeck", html)
         self.assertIn("startMatchWithCustomDeck", html)
 
+    def test_block_direct_placement_of_stage1_and_stage2(self):
+        """Stage 1 and Stage 2 Pokémon must NOT be directly placeable onto an empty bench slot."""
+        self.engine.reset_match()
+        self.engine.player_bench = []
+        self.engine.player_active = {
+            "name": "Pikachu",
+            "current_hp": 60,
+            "max_hp": 60,
+            "attached_energy": [],
+            "card_id": "sv1-1"
+        }
+
+        self.engine.player_hand = ["Charmeleon"]
+        res = self.engine.play_hand_card("Charmeleon")
+        self.assertEqual(res["status"], "error", "Charmeleon cannot be benched directly without matching base")
+        self.assertEqual(len(self.engine.player_bench), 0, "Bench should remain empty")
+
+        self.engine.player_hand = ["Charizard ex"]
+        res2 = self.engine.play_hand_card("Charizard ex")
+        self.assertEqual(res2["status"], "error", "Charizard ex cannot be benched directly without matching base")
+        self.assertEqual(len(self.engine.player_bench), 0, "Bench should remain empty")
+
+    def test_legal_stage1_evolution(self):
+        """Stage 1 Pokémon must evolve onto its matching Basic Pokémon and inherit attached energy."""
+        self.engine.reset_match()
+        self.engine.player_active = {
+            "name": "Charmander",
+            "current_hp": 70,
+            "max_hp": 70,
+            "attached_energy": ["Fire", "Colorless"],
+            "card_id": "sv3-26"
+        }
+        self.engine.player_hand = ["Charmeleon"]
+
+        res = self.engine.play_hand_card("Charmeleon")
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(self.engine.player_active["name"], "Charmeleon")
+        self.assertEqual(self.engine.player_active["max_hp"], 90)
+        self.assertEqual(self.engine.player_active["attached_energy"], ["Fire", "Colorless"])
+
+    def test_legal_stage2_evolution(self):
+        """Stage 2 Pokémon must evolve onto its matching Stage 1 Pokémon."""
+        self.engine.reset_match()
+        self.engine.player_active = {
+            "name": "Charmeleon",
+            "current_hp": 90,
+            "max_hp": 90,
+            "attached_energy": ["Fire", "Fire"],
+            "card_id": "sv3-27"
+        }
+        self.engine.player_hand = ["Charizard ex"]
+
+        res = self.engine.play_hand_card("Charizard ex")
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(self.engine.player_active["name"], "Charizard ex")
+        self.assertEqual(self.engine.player_active["max_hp"], 330)
+        self.assertEqual(self.engine.player_active["attached_energy"], ["Fire", "Fire"])
+
+    def test_stage_skipping_blocked_without_rare_candy(self):
+        """Skipping from Basic directly to Stage 2 without Rare Candy must fail."""
+        self.engine.reset_match()
+        self.engine.player_active = {
+            "name": "Charmander",
+            "current_hp": 70,
+            "max_hp": 70,
+            "attached_energy": ["Fire"],
+            "card_id": "sv3-26"
+        }
+        self.engine.player_hand = ["Charizard ex", "Basic Fire Energy"]
+
+        res = self.engine.play_hand_card("Charizard ex")
+        self.assertEqual(res["status"], "error")
+        self.assertEqual(self.engine.player_active["name"], "Charmander")
+
+    def test_rare_candy_evolution_combo(self):
+        """Holding Rare Candy allows evolving Basic directly into Stage 2."""
+        self.engine.reset_match()
+        self.engine.player_active = {
+            "name": "Charmander",
+            "current_hp": 70,
+            "max_hp": 70,
+            "attached_energy": ["Fire"],
+            "card_id": "sv3-26"
+        }
+        self.engine.player_hand = ["Rare Candy", "Charizard ex"]
+
+        res = self.engine.play_hand_card("Charizard ex")
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(res["action"], "RARE_CANDY_EVOLVE")
+        self.assertEqual(self.engine.player_active["name"], "Charizard ex")
+        self.assertEqual(self.engine.player_active["max_hp"], 330)
+        self.assertNotIn("Rare Candy", self.engine.player_hand)
+        self.assertIn("Rare Candy", self.engine.player_discard)
+
+    def test_frontend_js_basic_rules_and_randomization(self):
+        """Verify frontend JavaScript embeds Fisher-Yates deck shuffle and randomized Basic Pokémon selection."""
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+
+        self.assertIn("fisherYatesShuffle", html)
+        self.assertIn("getRandomBasicPokemon(4)", html)
+        self.assertIn("CHOSEN_4_CARDS = getRandomBasicPokemon(4)", html)
+        self.assertIn("OPPONENT_4_CARDS = getRandomBasicPokemon(4, CHOSEN_4_CARDS)", html)
+        self.assertIn("isBasicPokemon", html)
+        self.assertIn("Squirtle", html)
+        self.assertIn("Machop", html)
+        self.assertIn("Geodude", html)
+        self.assertIn("Abra", html)
+        self.assertIn("Meowth", html)
+        self.assertIn("Gastly", html)
+        self.assertIn("Psyduck", html)
+        self.assertIn("Only Basic Pokémon can be chosen for starting slots", html)
+
+    def test_deck_shuffle_and_random_starting_pokemon_simulation(self):
+        """Simulate 10 game setups to verify complete deck shuffling and starting Pokémon diversity."""
+        player_deck_orders = []
+        opp_deck_orders = []
+        player_starting_actives = []
+        opp_starting_actives = []
+
+        for i in range(10):
+            self.engine.reset_match("charizard-ex-pidgeot", "miraidon-ex-regieleki")
+
+            # Verify deck integrity (60 total cards distributed properly)
+            total_cards = (
+                len(self.engine.player_hand)
+                + len(self.engine.player_prizes)
+                + 1
+                + len(self.engine.player_bench)
+                + len(self.engine.player_deck)
+            )
+            self.assertEqual(total_cards, 60, f"Match #{i+1} player deck must total 60 cards.")
+
+            # Record deck orders and starting active Pokémon
+            p_deck_tuple = tuple(self.engine.player_deck)
+            opp_deck_tuple = tuple(self.engine.opp_deck)
+            player_deck_orders.append(p_deck_tuple)
+            opp_deck_orders.append(opp_deck_tuple)
+
+            player_starting_actives.append(self.engine.player_active["name"])
+            opp_starting_actives.append(self.engine.opp_active["name"])
+
+            # Verify that only Basic Pokémon are in active spot
+            p_meta = self.engine._get_meta(self.engine.player_active["name"])
+            p_subs = [s.lower() for s in p_meta.get("subtypes", [])]
+            p_stage = (p_meta.get("stage") or "").lower()
+            self.assertTrue(
+                "basic" in p_subs or p_stage == "basic",
+                f"Starting active '{self.engine.player_active['name']}' must be a Basic Pokémon!"
+            )
+            self.assertNotIn("stage 1", p_subs)
+            self.assertNotIn("stage 2", p_subs)
+
+        # Decks must be randomized across 10 games - no fixed repeated order!
+        unique_p_decks = len(set(player_deck_orders))
+        unique_opp_decks = len(set(opp_deck_orders))
+        self.assertGreater(unique_p_decks, 1, "Player 60-card decks must not be identical across games.")
+        self.assertGreater(unique_opp_decks, 1, "Opponent 60-card decks must not be identical across games.")
+
+
 if __name__ == "__main__":
     unittest.main()
+

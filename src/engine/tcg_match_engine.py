@@ -332,7 +332,7 @@ class TCGMatchEngine:
         # 1. PLAY BASIC POKÉMON TO BENCH
         if "pok" in stype and "basic" in subtypes:
             if len(self.player_bench) >= 3:
-                return {"status": "error", "message": "Bench is full (max 3 Pokémon)."}
+                return {"status": "error", "message": "Bench is full (max 3 Pokémon slots)."}
             self.player_hand.remove(card_name)
             self.player_bench.append({
                 "name": card_name,
@@ -345,11 +345,15 @@ class TCGMatchEngine:
             self.match_log.append(f"Benched Basic Pokémon [{card_name}] onto field.")
             return {"status": "success", "action": "BENCH_POKEMON", "card": card_name}
 
-        # 2. EVOLVE POKÉMON
+        # 2. EVOLVE POKÉMON (STAGE 1 OR STAGE 2)
         elif "pok" in stype and ("stage 1" in subtypes or "stage 2" in subtypes or "ex" in subtypes):
             evolves_from = (meta.get("evolves_from") or "").lower()
+            if not evolves_from:
+                # If evolves_from not explicitly set, determine by card rules or reject
+                return {"status": "error", "message": f"Cannot place '{card_name}' directly: only Basic Pokémon can be benched directly."}
+
             # Check Active Spot
-            if evolves_from and evolves_from in self.player_active["name"].lower():
+            if evolves_from in self.player_active["name"].lower():
                 self.player_hand.remove(card_name)
                 prev_hp = self.player_active["current_hp"]
                 prev_max = self.player_active["max_hp"]
@@ -364,26 +368,66 @@ class TCGMatchEngine:
 
             # Check Bench
             for b in self.player_bench:
-                if evolves_from and evolves_from in b["name"].lower():
+                if evolves_from in b["name"].lower():
                     self.player_hand.remove(card_name)
-                    new_max = meta.get("hp", 120)
+                    prev_hp = b["current_hp"]
+                    prev_max = b["max_hp"]
+                    new_max = meta.get("hp", prev_max + 100)
+                    diff = new_max - prev_max
                     b["name"] = card_name
                     b["max_hp"] = new_max
-                    b["current_hp"] = new_max
+                    b["current_hp"] = min(new_max, prev_hp + diff)
                     b["card_id"] = meta.get("card_id")
-                    self.match_log.append(f"Evolved Benched Pokémon into [{card_name}]!")
+                    self.match_log.append(f"Evolved Benched Pokémon into [{card_name}]! (HP upgraded to {b['current_hp']}/{new_max}).")
                     return {"status": "success", "action": "EVOLVE_BENCH", "card": card_name}
 
-            # If Rare Candy combo or direct evolution
-            if "charizard" in card_name.lower() and "charmander" in self.player_active["name"].lower():
-                self.player_hand.remove(card_name)
-                self.player_active["name"] = card_name
-                self.player_active["max_hp"] = 330
-                self.player_active["current_hp"] = 330
-                self.match_log.append(f"Direct Evolved Active into [{card_name}] (330 HP)!")
-                return {"status": "success", "action": "EVOLVE_ACTIVE", "card": card_name}
+            # If attempting Stage 2 without Stage 1: check for Rare Candy in hand
+            if "stage 2" in subtypes:
+                has_rare_candy = any("rare candy" in c.lower() for c in self.player_hand)
+                # Check if a matching Basic is on field (e.g. Charmander for Charizard ex)
+                basic_target = None
+                if "charizard" in card_name.lower():
+                    if "charmander" in self.player_active["name"].lower():
+                        basic_target = self.player_active
+                    else:
+                        basic_target = next((b for b in self.player_bench if "charmander" in b["name"].lower()), None)
+                elif "venusaur" in card_name.lower():
+                    if "bulbasaur" in self.player_active["name"].lower():
+                        basic_target = self.player_active
+                    else:
+                        basic_target = next((b for b in self.player_bench if "bulbasaur" in b["name"].lower()), None)
+                elif "pidgeot" in card_name.lower():
+                    if "pidgey" in self.player_active["name"].lower():
+                        basic_target = self.player_active
+                    else:
+                        basic_target = next((b for b in self.player_bench if "pidgey" in b["name"].lower()), None)
 
-            return {"status": "error", "message": f"No valid base Pokémon on field to evolve into '{card_name}'."}
+                if has_rare_candy and basic_target:
+                    # Remove Rare Candy and Evolution card
+                    candy_card = next(c for c in self.player_hand if "rare candy" in c.lower())
+                    self.player_hand.remove(candy_card)
+                    self.player_discard.append(candy_card)
+                    self.player_hand.remove(card_name)
+                    prev_hp = basic_target["current_hp"]
+                    prev_max = basic_target["max_hp"]
+                    new_max = meta.get("hp", 330)
+                    diff = new_max - prev_max
+                    basic_target["name"] = card_name
+                    basic_target["max_hp"] = new_max
+                    basic_target["current_hp"] = min(new_max, prev_hp + diff)
+                    basic_target["card_id"] = meta.get("card_id")
+                    self.match_log.append(f"🍬 Played [Rare Candy]! Evolved [{basic_target['name']}] directly into Stage 2 [{card_name}]!")
+                    return {"status": "success", "action": "RARE_CANDY_EVOLVE", "card": card_name}
+
+                return {
+                    "status": "error",
+                    "message": f"Cannot Evolve: No valid '{meta.get('evolves_from', 'Stage 1')}' Pokémon on field to evolve into '{card_name}'. Stage skipping requires Rare Candy."
+                }
+
+            return {
+                "status": "error",
+                "message": f"Cannot Evolve: No valid '{meta.get('evolves_from', 'Basic')}' Pokémon on field to evolve into '{card_name}'."
+            }
 
         # 3. ATTACH ENERGY
         elif "energy" in stype or "energy" in card_name.lower():
@@ -611,6 +655,38 @@ class TCGMatchEngine:
                     })
                     self.match_log.append(f"🤖 Opponent placed Basic Pokémon [{benched_name}] on Bench.")
                     break
+
+        # Step 2b: AI Legal Evolution (Active or Bench matching evolves_from)
+        for idx, c in enumerate(self.opp_hand):
+            c_meta = self._get_meta(c)
+            stype = (c_meta.get("supertype") or "").lower()
+            subtypes = [s.lower() for s in c_meta.get("subtypes", [])]
+            if "pok" in stype and ("stage 1" in subtypes or "stage 2" in subtypes or "ex" in subtypes):
+                ef = (c_meta.get("evolves_from") or "").lower()
+                if ef and ef in opp_active["name"].lower():
+                    evo_card = self.opp_hand.pop(idx)
+                    prev_hp = opp_active["current_hp"]
+                    prev_max = opp_active["max_hp"]
+                    new_max = c_meta.get("hp", prev_max + 100)
+                    opp_active["name"] = evo_card
+                    opp_active["max_hp"] = new_max
+                    opp_active["current_hp"] = min(new_max, prev_hp + (new_max - prev_max))
+                    opp_active["card_id"] = c_meta.get("card_id")
+                    self.match_log.append(f"🤖 Opponent evolved Active into [{evo_card}]! (HP: {opp_active['current_hp']}/{new_max}).")
+                    break
+                elif ef:
+                    matched_b = next((b for b in self.opp_bench if ef in b["name"].lower()), None)
+                    if matched_b:
+                        evo_card = self.opp_hand.pop(idx)
+                        prev_hp = matched_b["current_hp"]
+                        prev_max = matched_b["max_hp"]
+                        new_max = c_meta.get("hp", prev_max + 100)
+                        matched_b["name"] = evo_card
+                        matched_b["max_hp"] = new_max
+                        matched_b["current_hp"] = min(new_max, prev_hp + (new_max - prev_max))
+                        matched_b["card_id"] = c_meta.get("card_id")
+                        self.match_log.append(f"🤖 Opponent evolved Benched [{ef}] into [{evo_card}]!")
+                        break
 
         # Step 3: Attach Energy strategically (1 per turn)
         energy_card_idx = None
