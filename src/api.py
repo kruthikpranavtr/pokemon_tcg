@@ -2195,6 +2195,8 @@ HTML_DASHBOARD_CONTENT = """
             let CUSTOM_DECK = {};
             let CURRENT_CATEGORY_FILTER = 'all';
             let CURRENT_PREVIEW_ARCHETYPE = 'charizard-ex-pidgeot';
+            let IS_AI_PROCESSING = false;
+            let PKMN_DISPLAY_LIMIT = 30;
 
             function getMeta(cname) {
                 if (!cname) return { name: "Unknown", hp: 100, types: ["Normal"], attacks: [] };
@@ -2289,7 +2291,7 @@ HTML_DASHBOARD_CONTENT = """
             // ================= 3. MATCH INITIALIZATION & STATE ENGINE =================
             function build60CardDeck(cardNames) {
                 const deck = [];
-                cardNames.forEach(n => {
+                (cardNames || []).forEach(n => {
                     for (let i = 0; i < 3; i++) deck.push(n);
                 });
                 const trainers = ["Professor's Research", "Boss's Orders", "Arven", "Iono", "Ultra Ball", "Nest Ball", "Rare Candy", "Switch"];
@@ -2304,18 +2306,85 @@ HTML_DASHBOARD_CONTENT = """
                 return deck.sort(() => 0.5 - Math.random());
             }
 
+            function extractBasicFromDeck(deck) {
+                if (!deck || deck.length === 0) return null;
+                for (let i = 0; i < deck.length; i++) {
+                    const m = getMeta(deck[i]);
+                    const st = (m.supertype || '').toLowerCase();
+                    const subs = (m.subtypes || []).map(s => s.toLowerCase());
+                    if (st.includes('pok') && subs.includes('basic')) {
+                        return deck.splice(i, 1)[0];
+                    }
+                }
+                return deck.pop();
+            }
+
+            function canPayAttackCost(attachedEnergies, costList) {
+                if (!costList || costList.length === 0) return true;
+                const available = [...(attachedEnergies || [])];
+                const colorless = [];
+                for (const cost of costList) {
+                    if (cost.toLowerCase() === 'colorless') {
+                        colorless.push(cost);
+                    } else {
+                        const idx = available.findIndex(e => e.toLowerCase() === cost.toLowerCase());
+                        if (idx !== -1) {
+                            available.splice(idx, 1);
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+                return available.length >= colorless.length;
+            }
+
+            function setControlsDisabled(disabled) {
+                const ids = ['btn-claim-deck-card', 'btn-add-energy-main', 'hud-exec-btn'];
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.disabled = disabled;
+                        el.style.opacity = disabled ? '0.45' : '1';
+                        el.style.pointerEvents = disabled ? 'none' : 'auto';
+                    }
+                });
+                document.querySelectorAll('.btn-play-hand-card').forEach(btn => {
+                    btn.disabled = disabled;
+                    btn.style.opacity = disabled ? '0.45' : '1';
+                });
+                document.querySelectorAll('.btn-strike').forEach(btn => {
+                    btn.disabled = disabled;
+                    btn.style.opacity = disabled ? '0.45' : '1';
+                });
+            }
+
+            function updateAiStatusBanner(text) {
+                const banner = document.getElementById('match-status-banner');
+                if (banner) {
+                    banner.textContent = text;
+                    banner.style.borderColor = 'var(--neon-amber)';
+                    banner.style.color = 'var(--neon-amber)';
+                }
+            }
+
             function startNewMatch() {
                 const pDeck = build60CardDeck(CHOSEN_4_CARDS);
                 const oppDeck = build60CardDeck(OPPONENT_4_CARDS);
 
-                const pActiveMeta = getMeta(CHOSEN_4_CARDS[0]);
-                const oppActiveMeta = getMeta(OPPONENT_4_CARDS[0]);
+                const pActiveCard = CHOSEN_4_CARDS[0];
+                const oppActiveCard = OPPONENT_4_CARDS[0];
+                const pActiveMeta = getMeta(pActiveCard);
+                const oppActiveMeta = getMeta(oppActiveCard);
 
                 const pHand = [pDeck.pop(), pDeck.pop(), pDeck.pop(), pDeck.pop()];
                 const oppHand = [oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop()];
 
+                const pPrimaryType = (pActiveMeta.types || ['Fire'])[0];
+                const oppPrimaryType = (oppActiveMeta.types || ['Lightning'])[0];
+
                 CURRENT_MATCH_STATE = {
                     turn_number: 1,
+                    is_player_turn: true,
                     winner: null,
                     turn_flags: {
                         is_first_turn_of_game: true,
@@ -2324,10 +2393,10 @@ HTML_DASHBOARD_CONTENT = """
                     },
                     player: {
                         active_spot: {
-                            name: CHOSEN_4_CARDS[0],
+                            name: pActiveCard,
                             current_hp: pActiveMeta.hp || 200,
                             max_hp: pActiveMeta.hp || 200,
-                            attached_energy: ["Fire"],
+                            attached_energy: [pPrimaryType],
                             power_boost: 0,
                             card_id: pActiveMeta.card_id
                         },
@@ -2343,10 +2412,10 @@ HTML_DASHBOARD_CONTENT = """
                     },
                     opponent: {
                         active_spot: {
-                            name: OPPONENT_4_CARDS[0],
+                            name: oppActiveCard,
                             current_hp: oppActiveMeta.hp || 220,
                             max_hp: oppActiveMeta.hp || 220,
-                            attached_energy: ["Lightning"],
+                            attached_energy: [oppPrimaryType, oppPrimaryType],
                             card_id: oppActiveMeta.card_id
                         },
                         bench: [
@@ -2360,11 +2429,14 @@ HTML_DASHBOARD_CONTENT = """
                         prizes_taken: 0
                     },
                     match_log: [
-                        `⚔️ Esports Match Initialized: [${CHOSEN_4_CARDS[0]}] vs [${OPPONENT_4_CARDS[0]}]!`,
-                        `🃏 60-Card decks shuffled. Initial 4-card hands drawn. 3-Knockout victory limit active.`
+                        `⚔️ Esports Match Initialized: [${pActiveCard}] vs [${oppActiveCard}]!`,
+                        `🃏 60-Card decks shuffled. Initial 4-card hands drawn. 3-Knockout victory limit active.`,
+                        `=== START OF YOUR TURN 1 ===`
                     ]
                 };
 
+                IS_AI_PROCESSING = false;
+                setControlsDisabled(false);
                 updateMatchView(CURRENT_MATCH_STATE);
                 runDynamicAiAnalysis(CURRENT_MATCH_STATE);
             }
@@ -2396,7 +2468,7 @@ HTML_DASHBOARD_CONTENT = """
                 const winPctStr = (winProb * 100).toFixed(1) + '%';
 
                 const candidateMoves = [];
-                const attacks = pMeta.attacks || [{ name: "Strike", base_damage: 60 }];
+                const attacks = pMeta.attacks || [{ name: "Strike", base_damage: 60, cost: ["Colorless"] }];
 
                 attacks.forEach(atk => {
                     let dmg = atk.base_damage || 50;
@@ -2406,18 +2478,25 @@ HTML_DASHBOARD_CONTENT = """
                         dmg *= 2;
                         isWeak = true;
                     }
+                    const canAfford = canPayAttackCost(pActive.attached_energy, atk.cost);
                     const lethal = oppActive && (dmg >= oppActive.current_hp);
                     let score = lethal ? 95 : (dmg > 100 ? 80 : 65);
                     if (isWeak) score += 10;
+                    if (!canAfford) score -= 40;
 
-                    let rationale = lethal ? `⚔️ Strike with [${atk.name}] for ${dmg} DMG! Lethal knockout—earns 1 Prize Point toward victory!` : (isWeak ? `🔥 Type Advantage: [${atk.name}] hits weakness for ${dmg} DMG!` : `⚔️ Attack with [${atk.name}] dealing ${dmg} DMG.`);
+                    let rationale = lethal
+                        ? `⚔️ Strike with [${atk.name}] for ${dmg} DMG! Lethal knockout—earns 1 Prize Point!`
+                        : (isWeak ? `🔥 Type Advantage: [${atk.name}] hits weakness for ${dmg} DMG!` : `⚔️ Attack with [${atk.name}] dealing ${dmg} DMG.`);
+
+                    if (!canAfford) rationale += ` (Requires energy: ${(atk.cost || []).join(', ')})`;
 
                     candidateMoves.push({
                         action_type: 'ATTACK',
-                        title: `Strike: ${atk.name} (${dmg} DMG)`,
+                        title: `Strike: ${atk.name} (${dmg} DMG)${canAfford ? ' [READY]' : ' [NEED ENERGY]'}`,
                         damage: dmg,
                         attack_name: atk.name,
                         base_damage: atk.base_damage || 50,
+                        can_afford: canAfford,
                         score: score,
                         win_pct: (Math.min(95, winProb * 100 + (lethal ? 6 : 2))).toFixed(1) + '%',
                         rationale: rationale
@@ -2428,9 +2507,9 @@ HTML_DASHBOARD_CONTENT = """
                     candidateMoves.push({
                         action_type: 'ATTACH_ENERGY',
                         title: `Attach Energy to ${pActive.name}`,
-                        score: 72,
+                        score: 75,
                         win_pct: (Math.min(92, winProb * 100 + 3.2)).toFixed(1) + '%',
-                        rationale: `⚡ Attach Energy to Active [${pActive.name}] to satisfy high-damage attack costs.`
+                        rationale: `⚡ Attach Energy to Active [${pActive.name}] to power up high-damage attacks.`
                     });
                 }
 
@@ -2440,7 +2519,7 @@ HTML_DASHBOARD_CONTENT = """
                         title: `Bench Reserve Pokémon`,
                         score: 60,
                         win_pct: (winProb * 100).toFixed(1) + '%',
-                        rationale: `🛡️ Place a Sub Pokémon onto your Bench to guard against active knockout.`
+                        rationale: `🛡️ Place a Pokémon onto Bench to guard against active knockout.`
                     });
                 }
 
@@ -2449,7 +2528,7 @@ HTML_DASHBOARD_CONTENT = """
                     title: `Claim Card from Deck`,
                     score: 55,
                     win_pct: (winProb * 100 - 1.5).toFixed(1) + '%',
-                    rationale: `🃏 Draw 1 random card to replenish hand options.`
+                    rationale: `🃏 Draw 1 card to replenish hand options.`
                 });
 
                 candidateMoves.sort((a, b) => b.score - a.score);
@@ -2463,10 +2542,15 @@ HTML_DASHBOARD_CONTENT = """
                 const hudWin = document.getElementById('hud-win-pct');
                 const hudRec = document.getElementById('hud-rec-text');
 
-                if (leftWin) { leftWin.textContent = winPctStr; leftWin.style.color = winProb > 0.55 ? 'var(--neon-green)' : (winProb > 0.40 ? 'var(--neon-cyan)' : 'var(--neon-amber)'); }
+                if (leftWin) {
+                    leftWin.textContent = winPctStr;
+                    leftWin.style.color = winProb > 0.55 ? 'var(--neon-green)' : (winProb > 0.40 ? 'var(--neon-cyan)' : 'var(--neon-amber)');
+                }
                 if (leftAction) leftAction.textContent = topMove.title;
                 if (leftDesc) leftDesc.textContent = topMove.rationale;
-                if (leftRanked) { leftRanked.innerHTML = candidateMoves.slice(0, 3).map((m, idx) => `<div><b>${idx+1}.</b> ${m.title} &bull; <span style="color:var(--neon-green); font-weight:800;">${m.win_pct}</span></div>`).join(''); }
+                if (leftRanked) {
+                    leftRanked.innerHTML = candidateMoves.slice(0, 3).map((m, idx) => `<div><b>${idx+1}.</b> ${m.title} &bull; <span style="color:var(--neon-green); font-weight:800;">${m.win_pct}</span></div>`).join('');
+                }
                 if (hudWin) { hudWin.textContent = winPctStr; }
                 if (hudRec) { hudRec.textContent = `Recommended: "${topMove.title}" — ${topMove.rationale.substring(0, 85)}...`; }
             }
@@ -2484,35 +2568,40 @@ HTML_DASHBOARD_CONTENT = """
                 if (oppKoEl) oppKoEl.textContent = oppKos;
 
                 const statusBanner = document.getElementById('match-status-banner');
-                if (statusBanner) {
+                if (statusBanner && !IS_AI_PROCESSING) {
                     if (state.winner === 'Player' || pKos >= 3) {
-                        statusBanner.textContent = '🏆 VICTORY: KNOCKED OUT 3 OPPONENT MAIN POKÉMON!';
+                        statusBanner.textContent = '🏆 VICTORY: YOU KNOCKED OUT 3 OPPONENT MAIN POKÉMON!';
                         statusBanner.style.borderColor = 'var(--neon-green)';
                         statusBanner.style.color = 'var(--neon-green)';
                     } else if (state.winner === 'Opponent' || oppKos >= 3) {
                         statusBanner.textContent = '❌ DEFEAT: YOUR 3 MAIN POKÉMON WERE KNOCKED OUT!';
                         statusBanner.style.borderColor = 'var(--neon-magenta)';
                         statusBanner.style.color = 'var(--neon-magenta)';
-                    } else {
-                        statusBanner.textContent = `MATCH IN PROGRESS (TURN ${state.turn_number || 1} • 3-KO LIMIT)`;
+                    } else if (state.is_player_turn) {
+                        statusBanner.textContent = `👤 YOUR TURN (TURN ${state.turn_number || 1} • 3-KO LIMIT)`;
                         statusBanner.style.borderColor = 'var(--neon-cyan)';
                         statusBanner.style.color = 'var(--neon-cyan)';
+                    } else {
+                        statusBanner.textContent = `🤖 OPPONENT AI TURN (TURN ${state.turn_number || 1})`;
+                        statusBanner.style.borderColor = 'var(--neon-amber)';
+                        statusBanner.style.color = 'var(--neon-amber)';
                     }
                 }
 
                 const eBtn = document.getElementById('btn-add-energy-main');
                 if (eBtn) {
+                    const isPlayerTurn = state.is_player_turn && !IS_AI_PROCESSING && !state.winner;
                     const eUsed = state.turn_flags && state.turn_flags.energy_attached_this_turn;
-                    eBtn.disabled = !!eUsed;
+                    eBtn.disabled = !isPlayerTurn || !!eUsed;
                     eBtn.textContent = eUsed ? '⚡ + ADD ENERGY (1/1 ATTACHED)' : '⚡ + ADD ENERGY (1 PER TURN)';
-                    eBtn.style.opacity = eUsed ? '0.5' : '1';
+                    eBtn.style.opacity = (!isPlayerTurn || eUsed) ? '0.5' : '1';
                 }
 
                 const pDeckEl = document.getElementById('p-deck-count');
                 const oppDeckEl = document.getElementById('opp-deck-count');
                 const pDiscEl = document.getElementById('p-discard-count');
-                if (pDeckEl) pDeckEl.textContent = state.player.deck ? state.player.deck.length : 45;
-                if (oppDeckEl) oppDeckEl.textContent = state.opponent.deck ? state.opponent.deck.length : 45;
+                if (pDeckEl) pDeckEl.textContent = state.player.deck ? state.player.deck.length : 0;
+                if (oppDeckEl) oppDeckEl.textContent = state.opponent.deck ? state.opponent.deck.length : 0;
                 if (pDiscEl) pDiscEl.textContent = (state.player.discard || []).length;
 
                 renderActiveCard('player-active-view', state.player.active_spot, true);
@@ -2531,105 +2620,685 @@ HTML_DASHBOARD_CONTENT = """
                 const maxHp = pkmn.max_hp || meta.hp || 120;
                 const currHp = Math.max(0, pkmn.current_hp);
                 const hpPct = Math.max(0, Math.min(100, (currHp / maxHp) * 100));
-                
+
                 let attacksHtml = '';
-                (meta.attacks || [{ name: "Strike", base_damage: 60 }]).forEach(atk => {
-                    const cost = (atk.cost || []).map(e => `<span class="energy-pill">⚡ ${e}</span>`).join(' ') || 'Free';
+                const attacks = meta.attacks || [{ name: "Strike", base_damage: 60, cost: ["Colorless"] }];
+                attacks.forEach(atk => {
+                    const costStr = (atk.cost || []).map(e => `<span class="energy-pill">⚡ ${e}</span>`).join(' ') || 'Free';
                     let dmg = atk.base_damage || 0;
                     if (isPlayer && pkmn.power_boost) dmg += pkmn.power_boost;
-                    const strikeBtn = isPlayer ? `<button class="btn-strike" onclick="matchAttack('${atk.name.replace(/'/g, "\\'")}', ${dmg})">⚡ STRIKE</button>` : '';
+
+                    let strikeBtn = '';
+                    if (isPlayer) {
+                        const isTurn = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.is_player_turn && !IS_AI_PROCESSING && !CURRENT_MATCH_STATE.winner;
+                        const canAfford = canPayAttackCost(pkmn.attached_energy, atk.cost);
+                        if (!isTurn) {
+                            strikeBtn = `<button class="btn-strike" disabled style="opacity:0.4; cursor:not-allowed; font-size:0.7rem; padding:4px 8px;">⏳ AI TURN</button>`;
+                        } else if (!canAfford) {
+                            strikeBtn = `<button class="btn-strike" disabled style="opacity:0.45; cursor:not-allowed; border-color:#64748b; color:#94a3b8; font-size:0.7rem; padding:4px 8px;" title="Attach energy to use this attack!">⚡ NEED ENERGY</button>`;
+                        } else {
+                            strikeBtn = `<button class="btn-strike" onclick="matchAttack('${atk.name.replace(/'/g, "\\'")}', ${dmg})" style="font-size:0.75rem; padding:4px 10px;">⚡ STRIKE</button>`;
+                        }
+                    }
 
                     attacksHtml += `
-                        <div class="attack-item" style="display:flex; justify-content:space-between; padding:6px; background:rgba(255,255,255,0.03);">
-                            <div><div style="font-size:0.8rem; font-weight:800;">${atk.name}</div><div style="font-size:0.65rem;">Cost: [${cost}]</div></div>
-                            <div><div style="color:var(--neon-amber); font-weight:900;">${dmg > 0 ? dmg + ' DMG' : 'Effect'}</div>${strikeBtn}</div>
+                        <div class="attack-item" style="display:flex; justify-content:space-between; align-items:center; padding:6px; background:rgba(255,255,255,0.03); margin-top:4px; border-radius:6px;">
+                            <div>
+                                <div style="font-size:0.8rem; font-weight:800;">${atk.name}</div>
+                                <div style="font-size:0.65rem; color:var(--text-dim);">Cost: [${costStr}]</div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div style="color:var(--neon-amber); font-weight:900; font-size:0.85rem;">${dmg > 0 ? dmg + ' DMG' : 'Effect'}</div>
+                                ${strikeBtn}
+                            </div>
                         </div>
                     `;
                 });
 
+                const energyDisplay = (pkmn.attached_energy && pkmn.attached_energy.length > 0)
+                    ? pkmn.attached_energy.map(e => `<span class="energy-pill" style="margin:2px;">⚡ ${e}</span>`).join(' ')
+                    : '<span style="color:var(--text-dim);">None Attached</span>';
+
                 box.innerHTML = `
-                    <div style="font-family:var(--font-orbitron); font-size:1rem; color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; font-weight:900;">👑 ${pkmn.name}</div>
-                    <div style="font-size:0.8rem; font-weight:800;">HP: ${currHp} / ${maxHp}</div>
-                    <div class="hp-track" style="height:6px; background:#111; margin:6px 0;"><div class="hp-fill" style="width:${hpPct}%; background:${hpPct < 30 ? '#ef4444' : '#34d399'}; height:100%;"></div></div>
-                    <div class="energy-tray" style="font-size:0.7rem;">ENERGY: ${(pkmn.attached_energy || []).join(', ')}</div>
-                    ${attacksHtml}
+                    <div style="font-family:var(--font-orbitron); font-size:1.05rem; color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; font-weight:900;">
+                        ${isPlayer ? '👑 YOUR' : '👑 OPPONENT'} ACTIVE: ${pkmn.name}
+                    </div>
+                    <div style="font-size:0.82rem; font-weight:800; margin-top:4px;">
+                        HP: <span style="color:${currHp < 40 ? '#ef4444' : '#34d399'};">${currHp}</span> / ${maxHp}
+                    </div>
+                    <div class="hp-track" style="height:8px; background:#111; margin:6px 0; border-radius:4px; overflow:hidden;">
+                        <div class="hp-fill" style="width:${hpPct}%; background:${currHp < 40 ? '#ef4444' : (currHp < 80 ? '#f59e0b' : '#10b981')}; height:100%; transition:width 0.4s;"></div>
+                    </div>
+                    <div class="energy-tray" style="font-size:0.72rem; margin:6px 0;">
+                        <b>ENERGY:</b> ${energyDisplay}
+                    </div>
+                    <div style="margin-top:6px;">${attacksHtml}</div>
                 `;
             }
 
             function renderBenchGrid(containerId, bench, isPlayer) {
                 const box = document.getElementById(containerId);
                 if (!box) return;
-                box.innerHTML = (bench || []).map((b, i) => `<div class="bench-card" style="font-size:0.75rem; padding:6px; border:1px solid #333;">🛡️ SUB #${i+1}: ${b.name} (${b.current_hp} HP)</div>`).join('');
+                if (!bench || bench.length === 0) {
+                    box.innerHTML = `<div style="color:var(--text-dim); font-size:0.72rem; padding:6px; font-style:italic;">Empty Bench (0/3 slots)</div>`;
+                    return;
+                }
+                box.innerHTML = bench.map((b, i) => {
+                    const meta = getMeta(b.name);
+                    const maxHp = b.max_hp || meta.hp || 80;
+                    const currHp = Math.max(0, b.current_hp);
+                    const hpPct = Math.max(0, Math.min(100, (currHp / maxHp) * 100));
+                    const energies = (b.attached_energy && b.attached_energy.length > 0) ? b.attached_energy.join(', ') : '0 Energy';
+
+                    return `
+                        <div class="bench-card" style="font-size:0.72rem; padding:8px; border:1px solid rgba(255,255,255,0.1); border-radius:6px; background:rgba(2,4,9,0.7); margin-bottom:4px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:800;">
+                                <span style="color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'};">🛡️ #${i+1}: ${b.name}</span>
+                                <span style="color:#34d399;">${currHp}/${maxHp} HP</span>
+                            </div>
+                            <div class="hp-track" style="height:4px; background:#111; margin:4px 0;">
+                                <div class="hp-fill" style="width:${hpPct}%; background:${currHp < 30 ? '#ef4444' : '#34d399'}; height:100%;"></div>
+                            </div>
+                            <div style="font-size:0.65rem; color:var(--text-dim);">⚡ ${energies}</div>
+                        </div>
+                    `;
+                }).join('');
             }
 
             function renderHandGrid(hand) {
                 const box = document.getElementById('player-hand-view');
                 if (!box) return;
-                box.innerHTML = (hand || []).map(item => {
+                const isPlayerTurn = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.is_player_turn && !IS_AI_PROCESSING && !CURRENT_MATCH_STATE.winner;
+
+                if (!hand || hand.length === 0) {
+                    box.innerHTML = '<div style="color:var(--text-dim); font-size:0.78rem; padding:8px;">Your hand is currently empty. Click [CLAIM DECK CARD] to draw!</div>';
+                    return;
+                }
+
+                box.innerHTML = hand.map(item => {
                     const cname = typeof item === 'string' ? item : item.name;
-                    return `<div class="hand-card-chip" style="font-size:0.75rem; border:1px solid var(--neon-cyan); padding:4px; margin:2px;">${cname} <button onclick="matchPlayCard('${cname}')">Play</button></div>`;
+                    const meta = getMeta(cname);
+                    const stype = (meta.supertype || 'Card');
+                    const isEnergy = cname.toLowerCase().includes('energy') || stype.toLowerCase().includes('energy');
+                    const isPkmn = stype.toLowerCase().includes('pok');
+
+                    let badgeColor = isPkmn ? '#ef4444' : (isEnergy ? 'var(--neon-green)' : 'var(--neon-amber)');
+
+                    return `
+                        <div class="hand-card-chip" style="font-size:0.75rem; border:1px solid rgba(0,243,255,0.3); background:rgba(8,14,28,0.9); padding:6px 8px; margin:3px; border-radius:6px; display:inline-flex; align-items:center; gap:8px;">
+                            <div>
+                                <div style="font-weight:800; color:#fff;">${cname}</div>
+                                <div style="font-size:0.65rem; color:${badgeColor}; font-family:var(--font-mono);">${meta.hp ? meta.hp + ' HP' : stype}</div>
+                            </div>
+                            <button class="btn-play-hand-card btn-cyber-sm" style="font-size:0.7rem; padding:4px 8px;" ${!isPlayerTurn ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="matchPlayCard('${cname.replace(/'/g, "\\'")}')">Play</button>
+                        </div>
+                    `;
                 }).join('');
             }
 
             function renderCombatLog(log) {
                 const box = document.getElementById('combat-log');
                 if (!box) return;
-                box.innerHTML = log.map(l => `<div>&gt; ${l}</div>`).join('');
+                box.innerHTML = (log || []).map(l => `<div>&gt; ${l}</div>`).join('');
                 box.scrollTop = box.scrollHeight;
             }
 
-            // ================= 6. ACTIONS =================
+            // ================= 6. ACTIONS & OPPONENT AI =================
             function claimRandomDeckCard() {
-                if (!CURRENT_MATCH_STATE) return;
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
+                    alert("⏳ Please wait! It is the Opponent AI's turn.");
+                    return;
+                }
+                if (!CURRENT_MATCH_STATE.player.deck || CURRENT_MATCH_STATE.player.deck.length === 0) {
+                    alert("⚠️ Your deck is completely out of cards!");
+                    return;
+                }
+                if (CURRENT_MATCH_STATE.player.hand && CURRENT_MATCH_STATE.player.hand.length >= 10) {
+                    alert("⚠️ Hand limit reached (10 cards)! Play some cards before drawing more.");
+                    return;
+                }
+
                 const drawn = CURRENT_MATCH_STATE.player.deck.pop();
                 CURRENT_MATCH_STATE.player.hand.push(drawn);
-                CURRENT_MATCH_STATE.match_log.push(`🃏 Drew ${drawn}.`);
+                CURRENT_MATCH_STATE.match_log.push(`🃏 Drew [${drawn}] from your 60-card Mystery Deck.`);
+                show3DCardRevealModal(drawn, getMeta(drawn).supertype || 'Card');
                 updateMatchView(CURRENT_MATCH_STATE);
                 runDynamicAiAnalysis(CURRENT_MATCH_STATE);
             }
 
             function matchAttack(atkName, dmg) {
-                const pActive = CURRENT_MATCH_STATE.player.active_spot;
-                const oppActive = CURRENT_MATCH_STATE.opponent.active_spot;
-                oppActive.current_hp -= dmg;
-                CURRENT_MATCH_STATE.match_log.push(`⚔️ Used ${atkName} for ${dmg} DMG.`);
-                if (oppActive.current_hp <= 0) {
-                    CURRENT_MATCH_STATE.player.prizes_taken += 1;
-                    CURRENT_MATCH_STATE.match_log.push("🔥 Opponent KO'd!");
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
+                    alert("⏳ Please wait! It is the Opponent AI's turn.");
+                    return;
                 }
+
+                const pActive = CURRENT_MATCH_STATE.player.active_spot;
+                const meta = getMeta(pActive.name);
+                const atk = (meta.attacks || []).find(a => a.name.toLowerCase() === atkName.toLowerCase()) || { cost: ["Colorless"] };
+
+                if (!canPayAttackCost(pActive.attached_energy, atk.cost)) {
+                    alert(`⚠️ Cannot attack: [${atkName}] requires [${(atk.cost || []).join(', ')}] Energy! Attach Energy first.`);
+                    return;
+                }
+
+                const oppActive = CURRENT_MATCH_STATE.opponent.active_spot;
+                const oppMeta = getMeta(oppActive ? oppActive.name : '');
+                const pTypes = meta.types || ['Normal'];
+                const oppWeaknesses = (oppMeta.weaknesses || []).map(w => w.type);
+                let finalDmg = dmg;
+                let isWeak = false;
+                if (pTypes.some(t => oppWeaknesses.includes(t))) {
+                    finalDmg *= 2;
+                    isWeak = true;
+                }
+
+                oppActive.current_hp = Math.max(0, oppActive.current_hp - finalDmg);
+                CURRENT_MATCH_STATE.match_log.push(`⚔️ Your [${pActive.name}] used [${atkName}] for ${finalDmg} DMG${isWeak ? ' (WEAKNESS x2!)' : ''}! (Opponent HP: ${oppActive.current_hp}/${oppActive.max_hp})`);
+
+                // Check Opponent Knockout
+                if (oppActive.current_hp <= 0) {
+                    CURRENT_MATCH_STATE.player.prizes_taken = (CURRENT_MATCH_STATE.player.prizes_taken || 0) + 1;
+                    CURRENT_MATCH_STATE.opponent.discard = CURRENT_MATCH_STATE.opponent.discard || [];
+                    CURRENT_MATCH_STATE.opponent.discard.push(oppActive.name);
+                    CURRENT_MATCH_STATE.match_log.push(`🔥 Opponent's [${oppActive.name}] was KNOCKED OUT! You claimed 1 Prize Card (${CURRENT_MATCH_STATE.player.prizes_taken}/3)!`);
+
+                    if (CURRENT_MATCH_STATE.player.prizes_taken >= 3) {
+                        CURRENT_MATCH_STATE.winner = 'Player';
+                        CURRENT_MATCH_STATE.match_log.push('🏆 VICTORY: You knocked out 3 opponent Pokémon and won the match!');
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        return;
+                    }
+
+                    // Promote Opponent Bench
+                    if (CURRENT_MATCH_STATE.opponent.bench && CURRENT_MATCH_STATE.opponent.bench.length > 0) {
+                        const promoted = CURRENT_MATCH_STATE.opponent.bench.shift();
+                        CURRENT_MATCH_STATE.opponent.active_spot = {
+                            ...promoted,
+                            attached_energy: promoted.attached_energy && promoted.attached_energy.length > 0 ? promoted.attached_energy : ["Lightning"]
+                        };
+                        CURRENT_MATCH_STATE.match_log.push(`🔄 Opponent promoted [${promoted.name}] from Bench to Active Spot!`);
+                    } else {
+                        const nextPkmn = extractBasicFromDeck(CURRENT_MATCH_STATE.opponent.deck) || "Miraidon ex";
+                        const nm = getMeta(nextPkmn);
+                        CURRENT_MATCH_STATE.opponent.active_spot = {
+                            name: nextPkmn,
+                            current_hp: nm.hp || 220,
+                            max_hp: nm.hp || 220,
+                            attached_energy: ["Lightning"],
+                            card_id: nm.card_id
+                        };
+                        CURRENT_MATCH_STATE.match_log.push(`🔄 Opponent brought out [${nextPkmn}] (${nm.hp || 220} HP) to Active Spot!`);
+                    }
+                }
+
                 updateMatchView(CURRENT_MATCH_STATE);
-                runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+
+                // Attacking ends player's turn -> triggers autonomous AI turn
+                if (!CURRENT_MATCH_STATE.winner) {
+                    CURRENT_MATCH_STATE.is_player_turn = false;
+                    executeAiTurn();
+                }
             }
 
             function endPlayerTurn() {
-                CURRENT_MATCH_STATE.turn_number += 1;
-                CURRENT_MATCH_STATE.turn_flags.energy_attached_this_turn = false;
-                CURRENT_MATCH_STATE.match_log.push(`⏭️ Turn ended. Drawing card.`);
-                CURRENT_MATCH_STATE.player.hand.push(CURRENT_MATCH_STATE.player.deck.pop());
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) return;
+
+                CURRENT_MATCH_STATE.is_player_turn = false;
+                CURRENT_MATCH_STATE.match_log.push(`--- End of Your Turn (Turn ${CURRENT_MATCH_STATE.turn_number}) ---`);
+                updateMatchView(CURRENT_MATCH_STATE);
+
+                // Trigger autonomous AI turn
+                executeAiTurn();
+            }
+
+            async function executeAiTurn() {
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                IS_AI_PROCESSING = true;
+                setControlsDisabled(true);
+
+                const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+                updateAiStatusBanner("🤖 OPPONENT AI TURN: Thinking & drawing card...");
+                await sleep(750);
+                if (CURRENT_MATCH_STATE.winner) { IS_AI_PROCESSING = false; setControlsDisabled(false); return; }
+
+                // 1. Draw Card
+                if (CURRENT_MATCH_STATE.opponent.deck && CURRENT_MATCH_STATE.opponent.deck.length > 0) {
+                    const drawn = CURRENT_MATCH_STATE.opponent.deck.pop();
+                    CURRENT_MATCH_STATE.opponent.hand = CURRENT_MATCH_STATE.opponent.hand || [];
+                    CURRENT_MATCH_STATE.opponent.hand.push(drawn);
+                    CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent drew 1 card. (${CURRENT_MATCH_STATE.opponent.deck.length} remaining in deck).`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                } else {
+                    CURRENT_MATCH_STATE.match_log.push("🤖 Opponent deck is empty.");
+                }
+                await sleep(750);
+                if (CURRENT_MATCH_STATE.winner) { IS_AI_PROCESSING = false; setControlsDisabled(false); return; }
+
+                // 2. Play Basic Pokémon to Bench if space allows (< 3)
+                const oppBench = CURRENT_MATCH_STATE.opponent.bench || [];
+                const oppHand = CURRENT_MATCH_STATE.opponent.hand || [];
+                if (oppBench.length < 3) {
+                    const bIdx = oppHand.findIndex(c => {
+                        const m = getMeta(typeof c === 'string' ? c : c.name);
+                        const stype = (m.supertype || '').toLowerCase();
+                        const subs = (m.subtypes || []).map(s => s.toLowerCase());
+                        return stype.includes('pok') && subs.includes('basic');
+                    });
+                    if (bIdx !== -1) {
+                        const bCard = oppHand.splice(bIdx, 1)[0];
+                        const bName = typeof bCard === 'string' ? bCard : bCard.name;
+                        const bm = getMeta(bName);
+                        oppBench.push({
+                            name: bName,
+                            current_hp: bm.hp || 100,
+                            max_hp: bm.hp || 100,
+                            attached_energy: [],
+                            card_id: bm.card_id
+                        });
+                        CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent placed Basic Pokémon [${bName}] on Bench!`);
+                        updateAiStatusBanner(`🤖 OPPONENT AI: Benched [${bName}]...`);
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        await sleep(750);
+                    }
+                }
+                if (CURRENT_MATCH_STATE.winner) { IS_AI_PROCESSING = false; setControlsDisabled(false); return; }
+
+                // 3. Evolve Pokémon if matching evolution in hand
+                const oppActive = CURRENT_MATCH_STATE.opponent.active_spot;
+                const evoIdx = oppHand.findIndex(c => {
+                    const m = getMeta(typeof c === 'string' ? c : c.name);
+                    const stype = (m.supertype || '').toLowerCase();
+                    const subs = (m.subtypes || []).map(s => s.toLowerCase());
+                    const isEvo = stype.includes('pok') && (subs.includes('stage 1') || subs.includes('stage 2') || subs.includes('ex'));
+                    if (!isEvo) return false;
+                    if (m.evolves_from && oppActive.name.toLowerCase().includes(m.evolves_from.toLowerCase())) return true;
+                    return oppActive.name.toLowerCase().includes(m.name.toLowerCase().split(' ')[0]);
+                });
+                if (evoIdx !== -1) {
+                    const eCard = oppHand.splice(evoIdx, 1)[0];
+                    const eName = typeof eCard === 'string' ? eCard : eCard.name;
+                    const em = getMeta(eName);
+                    const oldMax = oppActive.max_hp || 100;
+                    const newMax = em.hp || (oldMax + 60);
+                    oppActive.name = eName;
+                    oppActive.max_hp = newMax;
+                    oppActive.current_hp = Math.min(newMax, oppActive.current_hp + (newMax - oldMax));
+                    oppActive.card_id = em.card_id;
+                    CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent evolved Active Pokémon into [${eName}]! (HP: ${oppActive.current_hp}/${newMax}).`);
+                    updateAiStatusBanner(`🤖 OPPONENT AI: Evolved into [${eName}]!`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    await sleep(750);
+                }
+                if (CURRENT_MATCH_STATE.winner) { IS_AI_PROCESSING = false; setControlsDisabled(false); return; }
+
+                // 4. Attach Energy strategically (1 per turn)
+                const oppActiveMeta = getMeta(oppActive ? oppActive.name : '');
+                const oppPrimaryType = (oppActiveMeta.types || ['Lightning'])[0];
+                let eIdx = oppHand.findIndex(c => {
+                    const cname = typeof c === 'string' ? c : c.name;
+                    return cname.toLowerCase().includes('energy') || (getMeta(cname).supertype || '').toLowerCase().includes('energy');
+                });
+
+                let attachedCard = null;
+                if (eIdx !== -1) {
+                    const ec = oppHand.splice(eIdx, 1)[0];
+                    attachedCard = typeof ec === 'string' ? ec : ec.name;
+                } else if ((oppActive.attached_energy || []).length < 3) {
+                    const inDeckIdx = (CURRENT_MATCH_STATE.opponent.deck || []).findIndex(c => c.toLowerCase().includes('energy'));
+                    if (inDeckIdx !== -1) {
+                        attachedCard = CURRENT_MATCH_STATE.opponent.deck.splice(inDeckIdx, 1)[0];
+                    } else {
+                        attachedCard = `Basic ${oppPrimaryType} Energy`;
+                    }
+                }
+
+                if (attachedCard) {
+                    const eType = attachedCard.replace('Basic', '').replace('Energy', '').trim() || oppPrimaryType;
+                    oppActive.attached_energy = oppActive.attached_energy || [];
+                    oppActive.attached_energy.push(eType);
+                    CURRENT_MATCH_STATE.match_log.push(`⚡ Opponent attached [${attachedCard}] to Active [${oppActive.name}].`);
+                    updateAiStatusBanner(`🤖 OPPONENT AI: Attached Energy to [${oppActive.name}]...`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    await sleep(750);
+                }
+                if (CURRENT_MATCH_STATE.winner) { IS_AI_PROCESSING = false; setControlsDisabled(false); return; }
+
+                // 5. Play Trainer card if available
+                const trIdx = oppHand.findIndex(c => {
+                    const cname = typeof c === 'string' ? c : c.name;
+                    const m = getMeta(cname);
+                    return (m.supertype || '').toLowerCase().includes('trainer') || (m.subtypes || []).some(s => ['supporter', 'item'].includes(s.toLowerCase()));
+                });
+                if (trIdx !== -1) {
+                    const trCard = oppHand.splice(trIdx, 1)[0];
+                    const trName = typeof trCard === 'string' ? trCard : trCard.name;
+                    CURRENT_MATCH_STATE.opponent.discard = CURRENT_MATCH_STATE.opponent.discard || [];
+                    CURRENT_MATCH_STATE.opponent.discard.push(trName);
+                    CURRENT_MATCH_STATE.match_log.push(`📜 Opponent played Trainer [${trName}].`);
+                    updateAiStatusBanner(`🤖 OPPONENT AI: Played [${trName}]...`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    await sleep(750);
+                }
+                if (CURRENT_MATCH_STATE.winner) { IS_AI_PROCESSING = false; setControlsDisabled(false); return; }
+
+                // 6. Evaluate Available Attacks & Choose Best Valid Attack
+                updateAiStatusBanner("🤖 OPPONENT AI: Evaluating attacks & calculating damage...");
+                await sleep(750);
+
+                const attacks = oppActiveMeta.attacks || [{ name: "Strike", base_damage: 60, cost: ["Colorless"] }];
+                const oppEnergy = oppActive.attached_energy || [];
+                let validAttacks = attacks.filter(a => canPayAttackCost(oppEnergy, a.cost));
+                if (validAttacks.length === 0 && oppEnergy.length >= 1) {
+                    validAttacks = [attacks[0]];
+                }
+
+                if (validAttacks.length > 0) {
+                    const pActive = CURRENT_MATCH_STATE.player.active_spot;
+                    const pMeta = getMeta(pActive.name);
+                    const oppTypes = oppActiveMeta.types || ['Lightning'];
+                    const pWeaknesses = (pMeta.weaknesses || []).map(w => w.type);
+
+                    function scoreAttack(a) {
+                        let base = a.base_damage || 60;
+                        let isW = oppTypes.some(t => pWeaknesses.includes(t));
+                        let dmg = isW ? base * 2 : base;
+                        let lethal = dmg >= pActive.current_hp ? 1000 : 0;
+                        return lethal + dmg;
+                    }
+
+                    validAttacks.sort((a, b) => scoreAttack(b) - scoreAttack(a));
+                    const bestAtk = validAttacks[0];
+                    let baseDmg = bestAtk.base_damage || 60;
+                    let isWeak = oppTypes.some(t => pWeaknesses.includes(t));
+                    let totalDmg = isWeak ? baseDmg * 2 : baseDmg;
+
+                    pActive.current_hp = Math.max(0, pActive.current_hp - totalDmg);
+                    CURRENT_MATCH_STATE.match_log.push(`⚔️ Opponent's [${oppActive.name}] used [${bestAtk.name}] for ${totalDmg} DMG${isWeak ? ' (WEAKNESS x2!)' : ''}!`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+
+                    // Check Player Knockout
+                    if (pActive.current_hp <= 0) {
+                        CURRENT_MATCH_STATE.opponent.prizes_taken = (CURRENT_MATCH_STATE.opponent.prizes_taken || 0) + 1;
+                        CURRENT_MATCH_STATE.player.discard = CURRENT_MATCH_STATE.player.discard || [];
+                        CURRENT_MATCH_STATE.player.discard.push(pActive.name);
+                        CURRENT_MATCH_STATE.match_log.push(`💥 Your [${pActive.name}] was KNOCKED OUT! (Opponent KOs: ${CURRENT_MATCH_STATE.opponent.prizes_taken}/3)`);
+
+                        if (CURRENT_MATCH_STATE.opponent.prizes_taken >= 3) {
+                            CURRENT_MATCH_STATE.winner = 'Opponent';
+                            CURRENT_MATCH_STATE.match_log.push('❌ DEFEAT: Opponent knocked out 3 of your Pokémon and won the match.');
+                            updateMatchView(CURRENT_MATCH_STATE);
+                            IS_AI_PROCESSING = false;
+                            setControlsDisabled(false);
+                            return;
+                        }
+
+                        // Promote Player Bench
+                        if (CURRENT_MATCH_STATE.player.bench && CURRENT_MATCH_STATE.player.bench.length > 0) {
+                            const promoted = CURRENT_MATCH_STATE.player.bench.shift();
+                            CURRENT_MATCH_STATE.player.active_spot = {
+                                ...promoted,
+                                attached_energy: promoted.attached_energy && promoted.attached_energy.length > 0 ? promoted.attached_energy : ["Fire"]
+                            };
+                            CURRENT_MATCH_STATE.match_log.push(`🛡️ Promoted [${promoted.name}] from Bench to Active Spot!`);
+                        } else {
+                            const nextPkmn = extractBasicFromDeck(CURRENT_MATCH_STATE.player.deck) || "Charmander";
+                            const nm = getMeta(nextPkmn);
+                            CURRENT_MATCH_STATE.player.active_spot = {
+                                name: nextPkmn,
+                                current_hp: nm.hp || 70,
+                                max_hp: nm.hp || 70,
+                                attached_energy: ["Fire"],
+                                card_id: nm.card_id
+                            };
+                            CURRENT_MATCH_STATE.match_log.push(`🛡️ Summoned [${nextPkmn}] (${nm.hp || 70} HP) from deck to Active Spot!`);
+                        }
+                    }
+                } else {
+                    CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent ended turn without attacking (insufficient Energy).`);
+                }
+                await sleep(750);
+
+                // 7. End AI Turn -> Start Player Turn
+                if (!CURRENT_MATCH_STATE.winner) {
+                    CURRENT_MATCH_STATE.turn_number += 1;
+                    CURRENT_MATCH_STATE.turn_flags.energy_attached_this_turn = false;
+                    CURRENT_MATCH_STATE.turn_flags.supporter_played_this_turn = false;
+                    CURRENT_MATCH_STATE.is_player_turn = true;
+
+                    if (CURRENT_MATCH_STATE.player.deck && CURRENT_MATCH_STATE.player.deck.length > 0) {
+                        const drawnCard = CURRENT_MATCH_STATE.player.deck.pop();
+                        CURRENT_MATCH_STATE.player.hand.push(drawnCard);
+                        CURRENT_MATCH_STATE.match_log.push(`=== YOUR TURN (TURN ${CURRENT_MATCH_STATE.turn_number}) === Drew [${drawnCard}].`);
+                    } else {
+                        CURRENT_MATCH_STATE.match_log.push(`=== YOUR TURN (TURN ${CURRENT_MATCH_STATE.turn_number}) ===`);
+                    }
+                }
+
+                IS_AI_PROCESSING = false;
+                setControlsDisabled(false);
                 updateMatchView(CURRENT_MATCH_STATE);
                 runDynamicAiAnalysis(CURRENT_MATCH_STATE);
             }
 
             function matchPlayCard(cname) {
-                CURRENT_MATCH_STATE.player.hand = CURRENT_MATCH_STATE.player.hand.filter(c => c !== cname);
-                CURRENT_MATCH_STATE.match_log.push(`Played ${cname}.`);
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
+                    alert("⏳ Please wait! It is the Opponent AI's turn.");
+                    return;
+                }
+
+                const hand = CURRENT_MATCH_STATE.player.hand || [];
+                const idx = hand.indexOf(cname);
+                if (idx === -1) return;
+
+                const meta = getMeta(cname);
+                const stype = (meta.supertype || '').toLowerCase();
+                const subtypes = (meta.subtypes || []).map(s => s.toLowerCase());
+
+                // 1. Basic Pokémon -> Bench
+                if (stype.includes('pok') && subtypes.includes('basic')) {
+                    const bench = CURRENT_MATCH_STATE.player.bench || [];
+                    if (bench.length >= 3) {
+                        alert("⚠️ Bench is full (max 3 Pokémon slots)!");
+                        return;
+                    }
+                    hand.splice(idx, 1);
+                    bench.push({
+                        name: cname,
+                        current_hp: meta.hp || 70,
+                        max_hp: meta.hp || 70,
+                        attached_energy: [],
+                        card_id: meta.card_id
+                    });
+                    CURRENT_MATCH_STATE.match_log.push(`🛡️ Placed Basic Pokémon [${cname}] onto Bench.`);
+                }
+                // 2. Evolution Pokémon -> Active or Bench
+                else if (stype.includes('pok') && (subtypes.includes('stage 1') || subtypes.includes('stage 2') || subtypes.includes('ex'))) {
+                    const evoFrom = (meta.evolves_from || '').toLowerCase();
+                    const pActive = CURRENT_MATCH_STATE.player.active_spot;
+                    let evolved = false;
+
+                    if (evoFrom && pActive.name.toLowerCase().includes(evoFrom)) {
+                        hand.splice(idx, 1);
+                        const oldMax = pActive.max_hp || 100;
+                        const newMax = meta.hp || (oldMax + 80);
+                        pActive.name = cname;
+                        pActive.max_hp = newMax;
+                        pActive.current_hp = Math.min(newMax, pActive.current_hp + (newMax - oldMax));
+                        pActive.card_id = meta.card_id;
+                        CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Active into [${cname}]! (HP: ${pActive.current_hp}/${newMax}).`);
+                        evolved = true;
+                    } else {
+                        const bench = CURRENT_MATCH_STATE.player.bench || [];
+                        for (let b of bench) {
+                            if (evoFrom && b.name.toLowerCase().includes(evoFrom)) {
+                                hand.splice(idx, 1);
+                                const oldMax = b.max_hp || 70;
+                                const newMax = meta.hp || (oldMax + 80);
+                                b.name = cname;
+                                b.max_hp = newMax;
+                                b.current_hp = Math.min(newMax, b.current_hp + (newMax - oldMax));
+                                b.card_id = meta.card_id;
+                                CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Benched Pokémon into [${cname}]!`);
+                                evolved = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!evolved) {
+                        if (cname.toLowerCase().includes('charizard') && pActive.name.toLowerCase().includes('charmander')) {
+                            hand.splice(idx, 1);
+                            pActive.name = cname;
+                            pActive.max_hp = 330;
+                            pActive.current_hp = 330;
+                            pActive.card_id = meta.card_id;
+                            CURRENT_MATCH_STATE.match_log.push(`🔥 Super Evolved Active into [${cname}] (330 HP)!`);
+                            evolved = true;
+                        } else {
+                            alert(`⚠️ No valid Pokémon on field to evolve into '${cname}'! Needs: ${meta.evolves_from || 'base Pokémon'}`);
+                            return;
+                        }
+                    }
+                }
+                // 3. Energy Card -> Attach to Active (1 per turn)
+                else if (stype.includes('energy') || cname.toLowerCase().includes('energy')) {
+                    if (CURRENT_MATCH_STATE.turn_flags.energy_attached_this_turn) {
+                        alert("⚡ You can only manually attach 1 Energy per turn!");
+                        return;
+                    }
+                    hand.splice(idx, 1);
+                    const eType = cname.replace('Basic', '').replace('Energy', '').trim() || 'Colorless';
+                    CURRENT_MATCH_STATE.player.active_spot.attached_energy = CURRENT_MATCH_STATE.player.active_spot.attached_energy || [];
+                    CURRENT_MATCH_STATE.player.active_spot.attached_energy.push(eType);
+                    CURRENT_MATCH_STATE.turn_flags.energy_attached_this_turn = true;
+                    CURRENT_MATCH_STATE.match_log.push(`⚡ Attached [${cname}] to Active [${CURRENT_MATCH_STATE.player.active_spot.name}].`);
+                }
+                // 4. Supporter Card -> 1 per turn
+                else if (subtypes.includes('supporter') || ['research', 'iono', 'boss', 'arven'].some(k => cname.toLowerCase().includes(k))) {
+                    if (CURRENT_MATCH_STATE.turn_flags.supporter_played_this_turn) {
+                        alert("📜 You can only play 1 Supporter card per turn!");
+                        return;
+                    }
+                    hand.splice(idx, 1);
+                    CURRENT_MATCH_STATE.player.discard = CURRENT_MATCH_STATE.player.discard || [];
+                    CURRENT_MATCH_STATE.player.discard.push(cname);
+                    CURRENT_MATCH_STATE.turn_flags.supporter_played_this_turn = true;
+
+                    if (cname.toLowerCase().includes('research')) {
+                        CURRENT_MATCH_STATE.player.discard.push(...hand);
+                        CURRENT_MATCH_STATE.player.hand = [];
+                        const drawCount = Math.min(5, (CURRENT_MATCH_STATE.player.deck || []).length);
+                        for (let i = 0; i < drawCount; i++) {
+                            CURRENT_MATCH_STATE.player.hand.push(CURRENT_MATCH_STATE.player.deck.pop());
+                        }
+                        CURRENT_MATCH_STATE.match_log.push(`📜 Played [${cname}]: Discarded hand and drew ${drawCount} cards!`);
+                    } else if (cname.toLowerCase().includes('boss')) {
+                        if (CURRENT_MATCH_STATE.opponent.bench && CURRENT_MATCH_STATE.opponent.bench.length > 0) {
+                            const swapped = CURRENT_MATCH_STATE.opponent.bench.shift();
+                            CURRENT_MATCH_STATE.opponent.bench.push(CURRENT_MATCH_STATE.opponent.active_spot);
+                            CURRENT_MATCH_STATE.opponent.active_spot = swapped;
+                            CURRENT_MATCH_STATE.match_log.push(`📜 Played [Boss's Orders]: Forced opponent's [${swapped.name}] to Active Spot!`);
+                        } else {
+                            CURRENT_MATCH_STATE.match_log.push(`📜 Played [Boss's Orders], but opponent has no Benched Pokémon.`);
+                        }
+                    } else {
+                        const drawCount = Math.min(3, (CURRENT_MATCH_STATE.player.deck || []).length);
+                        for (let i = 0; i < drawCount; i++) {
+                            CURRENT_MATCH_STATE.player.hand.push(CURRENT_MATCH_STATE.player.deck.pop());
+                        }
+                        CURRENT_MATCH_STATE.match_log.push(`📜 Played Supporter [${cname}]: Drew ${drawCount} cards!`);
+                    }
+                }
+                // 5. Item / Tool Card
+                else {
+                    hand.splice(idx, 1);
+                    CURRENT_MATCH_STATE.player.discard = CURRENT_MATCH_STATE.player.discard || [];
+                    CURRENT_MATCH_STATE.player.discard.push(cname);
+
+                    if (cname.toLowerCase().includes('ball')) {
+                        const found = extractBasicFromDeck(CURRENT_MATCH_STATE.player.deck);
+                        if (found) {
+                            CURRENT_MATCH_STATE.player.hand.push(found);
+                            CURRENT_MATCH_STATE.match_log.push(`Played [${cname}]: Searched deck and found [${found}]!`);
+                        } else {
+                            CURRENT_MATCH_STATE.match_log.push(`Played [${cname}]: No Pokémon found in deck.`);
+                        }
+                    } else if (cname.toLowerCase().includes('switch')) {
+                        if (CURRENT_MATCH_STATE.player.bench && CURRENT_MATCH_STATE.player.bench.length > 0) {
+                            const swapped = CURRENT_MATCH_STATE.player.bench.shift();
+                            CURRENT_MATCH_STATE.player.bench.push(CURRENT_MATCH_STATE.player.active_spot);
+                            CURRENT_MATCH_STATE.player.active_spot = swapped;
+                            CURRENT_MATCH_STATE.match_log.push(`Played [Switch]: Swapped Active with [${swapped.name}]!`);
+                        }
+                    } else {
+                        CURRENT_MATCH_STATE.match_log.push(`Played Item [${cname}].`);
+                    }
+                }
+
                 updateMatchView(CURRENT_MATCH_STATE);
                 runDynamicAiAnalysis(CURRENT_MATCH_STATE);
             }
 
             function promptAddEnergyDirect() {
-                CURRENT_MATCH_STATE.player.active_spot.attached_energy.push("Fire");
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
+                    alert("⏳ Please wait! It is the Opponent AI's turn.");
+                    return;
+                }
+                if (CURRENT_MATCH_STATE.turn_flags.energy_attached_this_turn) {
+                    alert("⚡ Energy attachment already used this turn!");
+                    return;
+                }
+
+                const hand = CURRENT_MATCH_STATE.player.hand || [];
+                const eIdx = hand.findIndex(c => (typeof c === 'string' ? c : c.name).toLowerCase().includes('energy'));
+                let eCardName = null;
+                if (eIdx !== -1) {
+                    const ec = hand.splice(eIdx, 1)[0];
+                    eCardName = typeof ec === 'string' ? ec : ec.name;
+                } else {
+                    const inDeck = (CURRENT_MATCH_STATE.player.deck || []).findIndex(c => c.toLowerCase().includes('energy'));
+                    if (inDeck !== -1) {
+                        eCardName = CURRENT_MATCH_STATE.player.deck.splice(inDeck, 1)[0];
+                    } else {
+                        eCardName = "Basic Fire Energy";
+                    }
+                }
+
+                const eType = eCardName.replace('Basic', '').replace('Energy', '').trim() || 'Fire';
+                CURRENT_MATCH_STATE.player.active_spot.attached_energy = CURRENT_MATCH_STATE.player.active_spot.attached_energy || [];
+                CURRENT_MATCH_STATE.player.active_spot.attached_energy.push(eType);
                 CURRENT_MATCH_STATE.turn_flags.energy_attached_this_turn = true;
+                CURRENT_MATCH_STATE.match_log.push(`⚡ Attached [${eCardName}] to Active [${CURRENT_MATCH_STATE.player.active_spot.name}].`);
                 updateMatchView(CURRENT_MATCH_STATE);
                 runDynamicAiAnalysis(CURRENT_MATCH_STATE);
             }
 
             function executeAiRecommendation() {
+                if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+                if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) return;
                 if (!LATEST_AI_REC || !LATEST_AI_REC.top_move) { claimRandomDeckCard(); return; }
                 const top = LATEST_AI_REC.top_move;
-                if (top.action_type === 'ATTACK') matchAttack(top.attack_name, top.damage);
-                else if (top.action_type === 'ATTACH_ENERGY') promptAddEnergyDirect();
-                else claimRandomDeckCard();
+                if (top.action_type === 'ATTACK' && top.can_afford) {
+                    matchAttack(top.attack_name, top.damage);
+                } else if (top.action_type === 'ATTACH_ENERGY') {
+                    promptAddEnergyDirect();
+                } else if (top.action_type === 'BENCH_POKEMON') {
+                    const hand = CURRENT_MATCH_STATE.player.hand || [];
+                    const basic = hand.find(c => {
+                        const m = getMeta(typeof c === 'string' ? c : c.name);
+                        return (m.supertype || '').toLowerCase().includes('pok') && (m.subtypes || []).some(s => s.toLowerCase().includes('basic'));
+                    });
+                    if (basic) matchPlayCard(typeof basic === 'string' ? basic : basic.name);
+                    else claimRandomDeckCard();
+                } else {
+                    claimRandomDeckCard();
+                }
             }
 
             // ================= 7. 3D CARD REVEAL MODAL =================
@@ -2683,13 +3352,27 @@ HTML_DASHBOARD_CONTENT = """
                 if (trGrid) trGrid.innerHTML = '';
                 if (enGrid) enGrid.innerHTML = '';
 
-                DATASET_CARDS.forEach(c => {
+                const displayPokemons = DATASET_CARDS.filter(c => (c.supertype || '').toLowerCase().includes('pok')).slice(0, PKMN_DISPLAY_LIMIT);
+                const displayTrainers = DATASET_CARDS.filter(c => (c.supertype || '').toLowerCase().includes('trainer'));
+                const displayEnergies = DATASET_CARDS.filter(c => (c.supertype || '').toLowerCase().includes('energy'));
+
+                function createCardElement(c) {
                     const stype = (c.supertype || '').toLowerCase();
                     const div = document.createElement('div');
                     div.className = 'dataset-card-box';
                     div.style.cssText = 'background:rgba(13,22,44,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:10px;';
 
-                    let content = `
+                    let attacksHtml = '';
+                    (c.attacks || []).forEach(atk => {
+                        attacksHtml += `
+                            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:4px 6px; margin-top:4px; display:flex; justify-content:space-between; font-size:0.75rem;">
+                                <span>${atk.name} (${(atk.cost || []).join('/') || 'Free'})</span>
+                                <b style="color:var(--neon-amber);">${atk.base_damage ? atk.base_damage + ' DMG' : 'Effect'}</b>
+                            </div>
+                        `;
+                    });
+
+                    div.innerHTML = `
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">${c.subtypes ? c.subtypes.join(' • ') : c.supertype}</span>
@@ -2697,35 +3380,26 @@ HTML_DASHBOARD_CONTENT = """
                             </div>
                             <div style="font-family:var(--font-orbitron); font-size:1rem; font-weight:900; color:#fff; margin:6px 0;">${c.name}</div>
                             <div style="font-size:0.75rem; color:var(--neon-cyan); margin-bottom:6px;">Type: ${(c.types || []).join(', ') || 'Colorless'}</div>
+                            ${attacksHtml}
+                        </div>
+                        <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+                            ${stype.includes('pok') ? `<button class="btn-cyber-sm btn-choose-4" style="flex:1; font-size:0.72rem; padding:6px 8px; text-align:center;">🎯 4-CARD BATTLE</button>` : ''}
+                            <button class="btn-cyber-sm btn-add-custom" style="flex:1; font-size:0.72rem; padding:6px 8px; background:rgba(0,255,136,0.15); border-color:var(--neon-green); color:var(--neon-green); text-align:center;">+ DECK BUILDER</button>
+                        </div>
                     `;
 
-                    (c.attacks || []).forEach(atk => {
-                        content += `
-                            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:4px 6px; margin-top:4px; display:flex; justify-content:space-between; font-size:0.75rem;">
-                                <span>${atk.name}</span>
-                                <b style="color:var(--neon-amber);">${atk.base_damage ? atk.base_damage + ' DMG' : 'Effect'}</b>
-                            </div>
-                        `;
-                    });
+                    const btn4 = div.querySelector('.btn-choose-4');
+                    if (btn4) btn4.onclick = () => chooseCardFor4Slot(c.name);
 
-                    content += `</div>`;
+                    const btnCustom = div.querySelector('.btn-add-custom');
+                    if (btnCustom) btnCustom.onclick = () => adjustCustomDeckCard(c.name, 1);
 
-                    if (stype.includes('pok')) {
-                        content += `
-                            <div style="margin-top:12px;">
-                                <button class="btn-action-main btn-choose-card" style="width:100%; font-size:0.75rem; padding:6px 10px; border-color:var(--neon-cyan); text-align:center;">🎯 CHOOSE FOR 4-CARD BATTLE</button>
-                            </div>
-                        `;
-                    }
+                    return div;
+                }
 
-                    div.innerHTML = content;
-                    const btn = div.querySelector('.btn-choose-card');
-                    if (btn) btn.onclick = () => chooseCardFor4Slot(c.name);
-
-                    if (stype.includes('pok') && pkmnGrid) pkmnGrid.appendChild(div);
-                    else if (stype.includes('trainer') && trGrid) trGrid.appendChild(div);
-                    else if (stype.includes('energy') && enGrid) enGrid.appendChild(div);
-                });
+                if (pkmnGrid) displayPokemons.forEach(c => pkmnGrid.appendChild(createCardElement(c)));
+                if (trGrid) displayTrainers.forEach(c => trGrid.appendChild(createCardElement(c)));
+                if (enGrid) displayEnergies.forEach(c => enGrid.appendChild(createCardElement(c)));
             }
 
             function filterCardsDatabase() {
@@ -2764,11 +3438,75 @@ HTML_DASHBOARD_CONTENT = """
                 }
             }
 
-            // ================= 9. META PRESETS =================
+            function loadMorePokemon() {
+                PKMN_DISPLAY_LIMIT += 30;
+                renderCardsDatabaseGrid();
+            }
+
+            function showAllPokemon() {
+                PKMN_DISPLAY_LIMIT = 9999;
+                renderCardsDatabaseGrid();
+            }
+
+            // ================= 9. META PRESETS & CUSTOM DECK BUILDER =================
             function renderDeckBuilderPreview(deckId) {
                 CURRENT_PREVIEW_ARCHETYPE = deckId;
                 const nameEl = document.getElementById('arch-active-name');
                 if (nameEl) nameEl.textContent = deckId.replace(/-/g, ' ').toUpperCase();
+
+                const previewCards = document.getElementById('deck-preview-cards');
+                if (!previewCards) return;
+
+                let deckCards = [];
+                if (deckId === 'miraidon-ex-regieleki') {
+                    deckCards = [
+                        { name: "Miraidon ex", count: 3, type: "Pokémon" },
+                        { name: "Tyranitar ex", count: 2, type: "Pokémon" },
+                        { name: "Raichu", count: 3, type: "Pokémon" },
+                        { name: "Zapdos", count: 2, type: "Pokémon" },
+                        { name: "Ultra Ball", count: 4, type: "Trainer" },
+                        { name: "Nest Ball", count: 4, type: "Trainer" },
+                        { name: "Professor's Research", count: 4, type: "Trainer" },
+                        { name: "Boss's Orders", count: 3, type: "Trainer" },
+                        { name: "Switch", count: 4, type: "Trainer" },
+                        { name: "Basic Lightning Energy", count: 31, type: "Energy" }
+                    ];
+                } else if (deckId === 'gardevoir-ex') {
+                    deckCards = [
+                        { name: "Mewtwo ex", count: 3, type: "Pokémon" },
+                        { name: "Gengar", count: 3, type: "Pokémon" },
+                        { name: "Alakazam ex", count: 2, type: "Pokémon" },
+                        { name: "Kangaskhan ex", count: 2, type: "Pokémon" },
+                        { name: "Ultra Ball", count: 4, type: "Trainer" },
+                        { name: "Rare Candy", count: 3, type: "Trainer" },
+                        { name: "Iono", count: 4, type: "Trainer" },
+                        { name: "Professor's Research", count: 3, type: "Trainer" },
+                        { name: "Basic Psychic Energy", count: 36, type: "Energy" }
+                    ];
+                } else {
+                    deckCards = [
+                        { name: "Charizard ex", count: 3, type: "Pokémon" },
+                        { name: "Charmander", count: 4, type: "Pokémon" },
+                        { name: "Pidgeot ex", count: 2, type: "Pokémon" },
+                        { name: "Venusaur ex", count: 2, type: "Pokémon" },
+                        { name: "Rare Candy", count: 4, type: "Trainer" },
+                        { name: "Ultra Ball", count: 4, type: "Trainer" },
+                        { name: "Nest Ball", count: 4, type: "Trainer" },
+                        { name: "Arven", count: 4, type: "Trainer" },
+                        { name: "Boss's Orders", count: 3, type: "Trainer" },
+                        { name: "Basic Fire Energy", count: 30, type: "Energy" }
+                    ];
+                }
+
+                previewCards.innerHTML = deckCards.map(c => `
+                    <div style="background:rgba(13,22,44,0.7); border:1px solid rgba(0,243,255,0.2); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <div>
+                            <b style="color:#fff; font-size:0.85rem;">${c.name}</b>
+                            <span style="color:var(--text-dim); font-size:0.75rem; margin-left:8px;">[${c.type}]</span>
+                        </div>
+                        <span class="cyber-badge" style="font-size:0.75rem; border-color:var(--neon-cyan);">${c.count}x</span>
+                    </div>
+                `).join('');
             }
 
             function selectArchetypePreview(deckId, btnEl) {
@@ -2778,18 +3516,178 @@ HTML_DASHBOARD_CONTENT = """
             }
 
             function startMatchWithCurrentDeck() {
-                if (CURRENT_PREVIEW_ARCHETYPE === 'miraidon-ex-regieleki') {
+                startMatchWithDeck(CURRENT_PREVIEW_ARCHETYPE);
+            }
+
+            function loadTop60RecommendedDeck() {
+                CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Miraidon ex", "Iron Hands ex"];
+                OPPONENT_4_CARDS = ["Gardevoir ex", "Scream Tail", "Pidgeot ex", "Venusaur ex"];
+                CURRENT_PREVIEW_ARCHETYPE = "ai-top-60-optimized";
+                const selectEl = document.getElementById('deck-select');
+                if (selectEl) selectEl.value = 'ai-top-60-optimized';
+                startNewMatch();
+                switchMode('match');
+                alert("⚡ Loaded AI Top-60 Strategic Optimized Deck into live match!");
+            }
+
+            function startMatchWithDeck(deckId) {
+                CURRENT_PREVIEW_ARCHETYPE = deckId;
+                if (deckId === 'miraidon-ex-regieleki') {
                     CHOSEN_4_CARDS = ["Miraidon ex", "Tyranitar ex", "Raichu", "Zapdos"];
                     OPPONENT_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
-                } else if (CURRENT_PREVIEW_ARCHETYPE === 'gardevoir-ex') {
+                } else if (deckId === 'gardevoir-ex') {
                     CHOSEN_4_CARDS = ["Mewtwo ex", "Gengar", "Alakazam ex", "Kangaskhan ex"];
                     OPPONENT_4_CARDS = ["Salamence", "Dragonite ex", "Lucario", "Machamp"];
+                } else if (deckId === 'ai-top-60-optimized') {
+                    CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Miraidon ex", "Iron Hands ex"];
+                    OPPONENT_4_CARDS = ["Gardevoir ex", "Scream Tail", "Pidgeot ex", "Venusaur ex"];
                 } else {
                     CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
                     OPPONENT_4_CARDS = ["Miraidon ex", "Tyranitar ex", "Raichu", "Zapdos"];
                 }
                 startNewMatch();
                 switchMode('match');
+            }
+
+            function updateCustomDeckStatsUI() {
+                let total = 0, pkmn = 0, tr = 0, en = 0;
+                const chipsBox = document.getElementById('chosen-deck-chips');
+                const distinctEl = document.getElementById('chosen-distinct-count');
+                const totalEl = document.getElementById('cd-total-count');
+                const pkmnEl = document.getElementById('cd-pkmn-count');
+                const trEl = document.getElementById('cd-trainer-count');
+                const enEl = document.getElementById('cd-energy-count');
+                const fillEl = document.getElementById('cd-progress-fill');
+                const playBtn = document.getElementById('btn-play-custom-deck');
+
+                const cardEntries = Object.entries(CUSTOM_DECK).filter(([_, count]) => count > 0);
+                cardEntries.forEach(([cname, count]) => {
+                    total += count;
+                    const m = getMeta(cname);
+                    const stype = (m.supertype || '').toLowerCase();
+                    if (stype.includes('pok')) pkmn += count;
+                    else if (stype.includes('trainer')) tr += count;
+                    else if (stype.includes('energy')) en += count;
+                    else pkmn += count;
+                });
+
+                if (totalEl) totalEl.textContent = total;
+                if (pkmnEl) pkmnEl.textContent = pkmn;
+                if (trEl) trEl.textContent = tr;
+                if (enEl) enEl.textContent = en;
+                if (distinctEl) distinctEl.textContent = cardEntries.length;
+                if (fillEl) fillEl.style.width = `${Math.min(100, (total / 60) * 100)}%`;
+                if (playBtn) playBtn.textContent = `⚔️ PLAY MATCH WITH THIS DECK (${total}/60)`;
+
+                if (chipsBox) {
+                    if (cardEntries.length === 0) {
+                        chipsBox.innerHTML = '<div style="color:var(--text-dim); font-size:0.75rem; padding:6px;">Your custom deck is currently empty. Use the select options on any card below to add cards!</div>';
+                    } else {
+                        chipsBox.innerHTML = cardEntries.map(([cname, count]) => `
+                            <div class="deck-card-chip" style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,243,255,0.1); border:1px solid var(--neon-cyan); border-radius:6px; padding:4px 8px; margin:3px; font-size:0.75rem;">
+                                <b>${cname}</b> (${count})
+                                <button style="background:#ef4444; border:none; color:#fff; border-radius:3px; width:18px; height:18px; cursor:pointer;" onclick="adjustCustomDeckCard('${cname.replace(/'/g, "\\'")}', -1)">-</button>
+                                <button style="background:#10b981; border:none; color:#fff; border-radius:3px; width:18px; height:18px; cursor:pointer;" onclick="adjustCustomDeckCard('${cname.replace(/'/g, "\\'")}', 1)">+</button>
+                            </div>
+                        `).join('');
+                    }
+                }
+            }
+
+            function adjustCustomDeckCard(cname, delta) {
+                const cur = CUSTOM_DECK[cname] || 0;
+                const next = cur + delta;
+                if (next <= 0) delete CUSTOM_DECK[cname];
+                else {
+                    if (delta > 0) {
+                        let total = Object.values(CUSTOM_DECK).reduce((a, b) => a + b, 0);
+                        if (total >= 60) {
+                            alert("⚠️ Deck already has 60 cards!");
+                            return;
+                        }
+                        if (!cname.toLowerCase().includes('basic energy') && next > 4) {
+                            alert(`⚠️ You cannot include more than 4 copies of '${cname}'!`);
+                            return;
+                        }
+                    }
+                    CUSTOM_DECK[cname] = next;
+                }
+                updateCustomDeckStatsUI();
+            }
+
+            function clearCustomDeck() {
+                CUSTOM_DECK = {};
+                updateCustomDeckStatsUI();
+            }
+
+            function autoFillBasicEnergy() {
+                let total = Object.values(CUSTOM_DECK).reduce((a, b) => a + b, 0);
+                if (total >= 60) {
+                    alert("⚠️ Deck already has 60 cards!");
+                    return;
+                }
+                const needed = 60 - total;
+                CUSTOM_DECK["Basic Fire Energy"] = (CUSTOM_DECK["Basic Fire Energy"] || 0) + Math.ceil(needed / 2);
+                CUSTOM_DECK["Basic Lightning Energy"] = (CUSTOM_DECK["Basic Lightning Energy"] || 0) + Math.floor(needed / 2);
+                updateCustomDeckStatsUI();
+                alert(`⚡ Added ${needed} Basic Energy cards to complete your 60-card deck!`);
+            }
+
+            function importCurrentArchetypeToCustomDeck() {
+                CUSTOM_DECK = {};
+                if (CURRENT_PREVIEW_ARCHETYPE === 'miraidon-ex-regieleki') {
+                    CUSTOM_DECK["Miraidon ex"] = 3;
+                    CUSTOM_DECK["Tyranitar ex"] = 2;
+                    CUSTOM_DECK["Raichu"] = 3;
+                    CUSTOM_DECK["Zapdos"] = 2;
+                    CUSTOM_DECK["Ultra Ball"] = 4;
+                    CUSTOM_DECK["Nest Ball"] = 4;
+                    CUSTOM_DECK["Professor's Research"] = 4;
+                    CUSTOM_DECK["Boss's Orders"] = 3;
+                    CUSTOM_DECK["Switch"] = 4;
+                    CUSTOM_DECK["Basic Lightning Energy"] = 31;
+                } else if (CURRENT_PREVIEW_ARCHETYPE === 'gardevoir-ex') {
+                    CUSTOM_DECK["Mewtwo ex"] = 3;
+                    CUSTOM_DECK["Gengar"] = 3;
+                    CUSTOM_DECK["Alakazam ex"] = 2;
+                    CUSTOM_DECK["Kangaskhan ex"] = 2;
+                    CUSTOM_DECK["Ultra Ball"] = 4;
+                    CUSTOM_DECK["Rare Candy"] = 3;
+                    CUSTOM_DECK["Iono"] = 4;
+                    CUSTOM_DECK["Professor's Research"] = 3;
+                    CUSTOM_DECK["Basic Psychic Energy"] = 36;
+                } else {
+                    CUSTOM_DECK["Charizard ex"] = 3;
+                    CUSTOM_DECK["Charmander"] = 4;
+                    CUSTOM_DECK["Pidgeot ex"] = 2;
+                    CUSTOM_DECK["Venusaur ex"] = 2;
+                    CUSTOM_DECK["Rare Candy"] = 4;
+                    CUSTOM_DECK["Ultra Ball"] = 4;
+                    CUSTOM_DECK["Nest Ball"] = 4;
+                    CUSTOM_DECK["Arven"] = 4;
+                    CUSTOM_DECK["Boss's Orders"] = 3;
+                    CUSTOM_DECK["Basic Fire Energy"] = 30;
+                }
+                updateCustomDeckStatsUI();
+                switchMode('cards');
+                alert(`📋 Imported ${CURRENT_PREVIEW_ARCHETYPE.toUpperCase()} into Custom 60-Card Deck Builder!`);
+            }
+
+            function startMatchWithCustomDeck() {
+                const total = Object.values(CUSTOM_DECK).reduce((a, b) => a + b, 0);
+                if (total < 4) {
+                    alert("⚠️ Please add at least 4 cards (or auto-fill with Basic Energy) to start!");
+                    return;
+                }
+                const pkmnCards = Object.keys(CUSTOM_DECK).filter(k => (getMeta(k).supertype || '').toLowerCase().includes('pok'));
+                if (pkmnCards.length >= 4) {
+                    CHOSEN_4_CARDS = pkmnCards.slice(0, 4);
+                } else {
+                    CHOSEN_4_CARDS = ["Charizard ex", "Charmander", "Pidgeot ex", "Venusaur ex"];
+                }
+                startNewMatch();
+                switchMode('match');
+                alert("⚔️ Started match with your custom 60-card deck!");
             }
 
             function initApp() {
@@ -2803,6 +3701,8 @@ HTML_DASHBOARD_CONTENT = """
                 startNewMatch();
                 renderCardsDatabaseGrid();
                 updateChosen4CardsUI();
+                renderDeckBuilderPreview(CURRENT_PREVIEW_ARCHETYPE);
+                updateCustomDeckStatsUI();
             }
 
             window.initApp = initApp;
@@ -2814,6 +3714,7 @@ HTML_DASHBOARD_CONTENT = """
             window.claimRandomDeckCard = claimRandomDeckCard;
             window.matchAttack = matchAttack;
             window.endPlayerTurn = endPlayerTurn;
+            window.executeAiTurn = executeAiTurn;
             window.executeAiRecommendation = executeAiRecommendation;
             window.promptAddEnergyDirect = promptAddEnergyDirect;
             window.getApiKey = getApiKey;
@@ -2822,6 +3723,15 @@ HTML_DASHBOARD_CONTENT = """
             window.setCardCategoryFilter = setCardCategoryFilter;
             window.selectArchetypePreview = selectArchetypePreview;
             window.startMatchWithCurrentDeck = startMatchWithCurrentDeck;
+            window.loadTop60RecommendedDeck = loadTop60RecommendedDeck;
+            window.startMatchWithDeck = startMatchWithDeck;
+            window.importCurrentArchetypeToCustomDeck = importCurrentArchetypeToCustomDeck;
+            window.clearCustomDeck = clearCustomDeck;
+            window.autoFillBasicEnergy = autoFillBasicEnergy;
+            window.startMatchWithCustomDeck = startMatchWithCustomDeck;
+            window.loadMorePokemon = loadMorePokemon;
+            window.showAllPokemon = showAllPokemon;
+            window.adjustCustomDeckCard = adjustCustomDeckCard;
             window.onload = initApp;
         </script>
     </body>

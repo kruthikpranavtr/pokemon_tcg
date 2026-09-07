@@ -543,6 +543,7 @@ class TCGMatchEngine:
                 self.match_log.append(f"🔄 Opponent summoned {next_pkmn} ({self.opp_active['current_hp']} HP) from deck to Active Spot.")
 
         # If match is still active, Opponent Automatically Executes Intelligent Counter-Strike
+        self.has_attacked_this_turn = True
         if not self.winner:
             self._simulate_opponent_turn()
 
@@ -558,59 +559,138 @@ class TCGMatchEngine:
         }
 
     def end_turn(self):
-        """Passes turn, triggers opponent actions, and begins next turn."""
+        """Passes turn, triggers opponent actions if opponent hasn't acted yet, and begins next turn."""
         self.match_log.append(f"--- End of Player Turn {self.turn_number} ---")
 
-        if not self.winner:
+        if not self.winner and not getattr(self, "has_attacked_this_turn", False):
             self._simulate_opponent_turn()
 
         self.turn_number += 1
         self.energy_attached_this_turn = False
         self.supporter_played_this_turn = False
+        self.has_attacked_this_turn = False
         self.draw_card(is_player=True)
         self.match_log.append(f"=== START OF PLAYER TURN {self.turn_number} ===")
 
     def _simulate_opponent_turn(self):
-        """Intelligent Opponent: Draws card, attaches energy, uses support, and attacks to win."""
+        """Intelligent Opponent AI:
+        1. Draws card from deck
+        2. Plays Basic Pokémon to Bench if space allows (<3)
+        3. Attaches Energy strategically
+        4. Plays Trainer cards if useful
+        5. Selects best valid attack and strikes player
+        6. Resolves knockouts, prize cards, and bench promotion
+        """
+        if self.winner:
+            return
+
+        self.match_log.append("🤖 --- Opponent AI Turn Started ---")
+        # Step 1: Draw card
         self.draw_card(is_player=False)
+
         opp_active = self.opp_active
         p_active = self.player_active
         opp_meta = self._get_meta(opp_active["name"])
         p_meta = self._get_meta(p_active["name"])
 
-        # 1. Opponent auto-attaches energy if needed
-        if len(opp_active.get("attached_energy", [])) < 2:
-            opp_active["attached_energy"].append("Lightning")
-            self.match_log.append(f"⚡ Opponent attached Basic Lightning Energy to {opp_active['name']}.")
+        # Step 2: Play Basic Pokémon from hand to bench if space (<3)
+        if len(self.opp_bench) < 3:
+            for idx, c in enumerate(self.opp_hand):
+                c_meta = self._get_meta(c)
+                stype = (c_meta.get("supertype") or "").lower()
+                subtypes = [s.lower() for s in c_meta.get("subtypes", [])]
+                if "pok" in stype and "basic" in subtypes:
+                    benched_name = self.opp_hand.pop(idx)
+                    self.opp_bench.append({
+                        "name": benched_name,
+                        "current_hp": c_meta.get("hp", 100),
+                        "max_hp": c_meta.get("hp", 100),
+                        "attached_energy": [],
+                        "turns_in_play": 0,
+                        "card_id": c_meta.get("card_id")
+                    })
+                    self.match_log.append(f"🤖 Opponent placed Basic Pokémon [{benched_name}] on Bench.")
+                    break
 
-        # 2. Opponent selects best attack
+        # Step 3: Attach Energy strategically (1 per turn)
+        energy_card_idx = None
+        for idx, c in enumerate(self.opp_hand):
+            if "energy" in c.lower() or "energy" in (self._get_meta(c).get("supertype") or "").lower():
+                energy_card_idx = idx
+                break
+
+        primary_type = (opp_meta.get("types") or ["Lightning"])[0]
+        if energy_card_idx is not None:
+            e_card = self.opp_hand.pop(energy_card_idx)
+            e_type = e_card.replace("Basic", "").replace("Energy", "").strip() or primary_type
+            opp_active["attached_energy"].append(e_type)
+            self.match_log.append(f"⚡ Opponent attached [{e_card}] to Active [{opp_active['name']}].")
+        elif len(opp_active.get("attached_energy", [])) < 3:
+            # Fallback attachment from deck to keep competitive pace
+            opp_active["attached_energy"].append(primary_type)
+            self.match_log.append(f"⚡ Opponent attached Basic {primary_type} Energy to [{opp_active['name']}].")
+
+        # Step 4: Play Trainer / Supporter card if in hand
+        for idx, c in enumerate(self.opp_hand):
+            c_meta = self._get_meta(c)
+            subtypes = [s.lower() for s in c_meta.get("subtypes", [])]
+            if "supporter" in subtypes or "trainer" in (c_meta.get("supertype") or "").lower():
+                t_card = self.opp_hand.pop(idx)
+                self.opp_discard.append(t_card)
+                self.match_log.append(f"📜 Opponent played Trainer [{t_card}] to optimize strategy.")
+                break
+
+        # Step 5: Evaluate Attacks & Choose Best Valid Attack
         atks = opp_meta.get("attacks", [])
-        if atks:
-            best_atk = max(atks, key=lambda a: a.get("base_damage", 0))
-            base_dmg = best_atk.get("base_damage", 120)
+        if not atks:
+            atks = [{"name": "Strike", "base_damage": 60, "cost": ["Colorless"]}]
+
+        attached_energy_count = len(opp_active.get("attached_energy", []))
+        valid_attacks = []
+        for a in atks:
+            cost = a.get("cost", [])
+            # If energy count is sufficient to pay cost
+            if attached_energy_count >= len(cost) or len(cost) == 0:
+                valid_attacks.append(a)
+
+        # If no attack meets exact cost, allow the lowest cost attack if attached >= 1
+        if not valid_attacks and attached_energy_count >= 1:
+            valid_attacks = [min(atks, key=lambda a: len(a.get("cost", [])))]
+
+        if valid_attacks:
+            # Prioritize lethal knockout, then highest damage
+            def eval_atk(a):
+                base = a.get("base_damage", 60)
+                is_weak = any((opp_meta.get("types") or ["Lightning"])[0] == w.get("type") for w in p_meta.get("weaknesses", []))
+                calc_dmg = base * 2 if is_weak else base
+                lethal = 1000 if calc_dmg >= p_active["current_hp"] else 0
+                return lethal + calc_dmg
+
+            best_atk = max(valid_attacks, key=eval_atk)
+            base_dmg = best_atk.get("base_damage", 60)
             atk_name = best_atk.get("name", "Strike")
 
-            # Check weakness on player
+            # Weakness check on player
             dmg = base_dmg
             is_weak = False
             for w in p_meta.get("weaknesses", []):
-                if (opp_meta.get("types") or ["Normal"])[0] == w.get("type"):
+                if (opp_meta.get("types") or ["Lightning"])[0] == w.get("type"):
                     dmg *= 2
                     is_weak = True
                     break
 
             prev_hp = p_active["current_hp"]
             p_active["current_hp"] = max(0, p_active["current_hp"] - dmg)
-            self.match_log.append(f"⚔️ Opponent's {opp_active['name']} struck back with [{atk_name}] for {dmg} DMG{' (WEAKNESS x2!)' if is_weak else ''}! (Our HP: {prev_hp} -> {p_active['current_hp']}).")
+            self.match_log.append(f"⚔️ Opponent's [{opp_active['name']}] attacked with [{atk_name}] dealing {dmg} DMG{' (WEAKNESS x2!)' if is_weak else ''}! (Your HP: {prev_hp} -> {p_active['current_hp']}).")
 
             # Check Player Knockout
             if p_active["current_hp"] <= 0:
                 p_active["current_hp"] = 0
                 self.player_discard.append(p_active["name"])
                 self.opp_prizes_taken += 1
-                self.match_log.append(f"💥 Our {p_active['name']} lost full HP! Card removed to discard. (Opponent Knockouts: {self.opp_prizes_taken}/3).")
+                self.match_log.append(f"💥 Your [{p_active['name']}] was KNOCKED OUT! (Opponent Knockouts: {self.opp_prizes_taken}/3).")
 
-                # Check Opponent 3-Knockout Win
+                # Check Opponent Win Condition
                 if self.opp_prizes_taken >= 3:
                     self.winner = "Opponent"
                     self.match_log.append("❌ DEFEAT: Opponent has knocked out 3 of your Pokémon and won the match.")
@@ -620,7 +700,7 @@ class TCGMatchEngine:
                 if self.player_bench:
                     promoted = self.player_bench.pop(0)
                     self.player_active = promoted
-                    self.match_log.append(f"🛡️ We promoted {promoted['name']} to Active Spot.")
+                    self.match_log.append(f"🛡️ Promoted [{promoted['name']}] from Bench to Active Spot.")
                 else:
                     next_pkmn = self._extract_basic_or_fallback(self.player_hand, self.player_deck, "Charmander")
                     nm = self._get_meta(next_pkmn)
@@ -632,7 +712,11 @@ class TCGMatchEngine:
                         "turns_in_play": 1,
                         "card_id": nm.get("card_id")
                     }
-                    self.match_log.append(f"🛡️ Summoned {next_pkmn} ({self.player_active['current_hp']} HP) from deck to Active Spot.")
+                    self.match_log.append(f"🛡️ Summoned [{next_pkmn}] ({self.player_active['current_hp']} HP) from deck to Active Spot.")
+        else:
+            self.match_log.append(f"🤖 Opponent's [{opp_active['name']}] ended turn without attacking (needs more Energy).")
+
+        self.match_log.append("🤖 --- Opponent AI Turn Ended ---")
 
     def get_game_state_dict(self) -> Dict[str, Any]:
         """Converts internal match state to standardized dictionary for GNN/Transformer/MCTS models."""
