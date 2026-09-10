@@ -91,6 +91,15 @@ class CardDatabase:
                     except Exception:
                         attacks = []
 
+                raw_weak = card_obj.get("weaknesses", [])
+                if not raw_weak and isinstance(card_obj.get("weakness"), dict):
+                    raw_weak = [card_obj.get("weakness")]
+
+                norm_name = name.lower().strip()
+                default_type, default_weak = self._lookup_default_type_and_weakness(norm_name)
+                types = [ptype] if ptype else ([default_type] if default_type else ["Colorless"])
+                weaknesses = raw_weak if raw_weak else ([{"type": default_weak, "value": "x2"}] if default_weak else [])
+
                 entry = {
                     "card_id": cid,
                     "name": name,
@@ -99,14 +108,13 @@ class CardDatabase:
                     "subtypes": subtypes,
                     "stage": stage or ("Basic" if supertype == "Pokémon" else ""),
                     "hp": hp or (220 if "ex" in name.lower() else 80),
-                    "types": [ptype] if ptype else ["Colorless"],
+                    "types": types,
                     "attacks": attacks or ([{"name": "Strike", "base_damage": 50, "cost": ["Colorless"]}] if supertype == "Pokémon" else []),
                     "retreat_cost": ["Colorless"],
-                    "weaknesses": card_obj.get("weaknesses", [])
+                    "weaknesses": weaknesses
                 }
 
                 self.cards_by_id[cid] = entry
-                norm_name = name.lower().strip()
                 self.cards_by_name[norm_name] = entry
 
                 if supertype == "Pokémon" and (stage == "Basic" or "basic" in [s.lower() for s in subtypes]):
@@ -119,6 +127,36 @@ class CardDatabase:
             conn.close()
         except Exception as ex:
             print(f"[CardDatabase] SQLite load error: {ex}")
+
+    @staticmethod
+    def _lookup_default_type_and_weakness(clean_lower: str):
+        type_map = {
+            "charmander": ("Fire", "Water"),
+            "charmeleon": ("Fire", "Water"),
+            "charizard": ("Fire", "Water"),
+            "charizard ex": ("Darkness", "Grass"),
+            "bulbasaur": ("Grass", "Fire"),
+            "ivysaur": ("Grass", "Fire"),
+            "venusaur": ("Grass", "Fire"),
+            "squirtle": ("Water", "Lightning"),
+            "wartortle": ("Water", "Lightning"),
+            "blastoise": ("Water", "Lightning"),
+            "pikachu": ("Lightning", "Fighting"),
+            "raichu": ("Lightning", "Fighting"),
+            "machop": ("Fighting", "Psychic"),
+            "machoke": ("Fighting", "Psychic"),
+            "machamp": ("Fighting", "Psychic"),
+            "gengar": ("Psychic", "Darkness"),
+            "eevee": ("Colorless", "Fighting"),
+            "snorlax": ("Colorless", "Fighting"),
+            "mewtwo": ("Psychic", "Darkness"),
+            "miraidon": ("Lightning", "Fighting"),
+            "koraidon": ("Fighting", "Psychic")
+        }
+        for k, (t, w) in type_map.items():
+            if k in clean_lower:
+                return t, w
+        return None, None
 
     def get_card(self, identifier: str) -> Optional[Dict[str, Any]]:
         """Lookup by card_id or name."""
@@ -165,6 +203,10 @@ class CardDatabase:
             }
 
         is_ex = "ex" in clean_lower or " v" in clean_lower
+        def_type, def_weak = self._lookup_default_type_and_weakness(clean_lower)
+        types = [def_type] if def_type else ["Colorless"]
+        weaknesses = [{"type": def_weak, "value": "x2"}] if def_weak else []
+
         return {
             "card_id": f"gen-{clean_lower.replace(' ', '-')}",
             "name": clean,
@@ -173,10 +215,10 @@ class CardDatabase:
             "subtypes": ["Basic"],
             "stage": "Basic",
             "hp": 220 if is_ex else 80,
-            "types": ["Colorless"],
-            "attacks": [{"name": "Strike", "base_damage": 50, "cost": ["Colorless"]}],
+            "types": types,
+            "attacks": [{"name": f"{clean} Strike", "base_damage": 50, "cost": types}],
             "retreat_cost": ["Colorless"],
-            "weaknesses": []
+            "weaknesses": weaknesses
         }
 
     def is_basic_pokemon(self, identifier: str) -> bool:

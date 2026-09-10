@@ -161,6 +161,94 @@ class PositionEvaluator:
             "opponent_threat": round(opp_threat, 4)
         }
 
+    def evaluate_pokemon_as_main(self, candidate_name: str, opp_act_state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Evaluates a candidate Pokémon's strategic matchup and winning possibility
+        if deployed as the active main card against the opponent's active Pokémon.
+        Analyzes type weakness (2x multiplier), attack damage, turns to KO, and survivability.
+        """
+        cand_meta = self.card_db.get_meta(candidate_name)
+        cand_hp = int(cand_meta.get("hp", 70) or 70)
+        cand_types = cand_meta.get("types", ["Colorless"])
+        cand_weaknesses = cand_meta.get("weaknesses", [])
+
+        opp_name = opp_act_state.get("name", "") if isinstance(opp_act_state, dict) else str(opp_act_state)
+        opp_meta = self.card_db.get_meta(opp_name)
+        opp_hp = int(opp_act_state.get("current_hp", opp_meta.get("hp", 70)) or 70) if isinstance(opp_act_state, dict) else int(opp_meta.get("hp", 70) or 70)
+        opp_types = opp_meta.get("types", ["Colorless"])
+        opp_weaknesses = opp_meta.get("weaknesses", [])
+
+        # Check if candidate hits opponent weakness
+        hits_weakness = False
+        for w in opp_weaknesses:
+            if isinstance(w, dict) and w.get("type") in cand_types:
+                hits_weakness = True
+                break
+
+        # Check if opponent hits candidate weakness
+        opp_hits_weakness = False
+        for w in cand_weaknesses:
+            if isinstance(w, dict) and w.get("type") in opp_types:
+                opp_hits_weakness = True
+                break
+
+        # Calculate candidate damage vs opponent
+        attacks = cand_meta.get("attacks", []) or [{"name": f"{candidate_name} Strike", "base_damage": 50, "cost": cand_types}]
+        best_atk = attacks[0]
+        base_dmg = int(best_atk.get("base_damage", 50) or 50)
+        final_dmg = base_dmg * (2 if hits_weakness else 1)
+
+        is_1hit_ko = final_dmg >= opp_hp and opp_hp > 0
+        turns_to_ko = 1 if is_1hit_ko else max(2, int(np.ceil(opp_hp / max(1, final_dmg))))
+
+        # Opponent counterattack threat
+        opp_attacks = opp_meta.get("attacks", []) or [{"name": "Strike", "base_damage": 40, "cost": opp_types}]
+        opp_base_dmg = int(opp_attacks[0].get("base_damage", 40) or 40)
+        opp_final_dmg = opp_base_dmg * (2 if opp_hits_weakness else 1)
+        cand_survives = cand_hp > opp_final_dmg
+
+        # Win probability formula
+        win_prob = 50
+        if hits_weakness:
+            win_prob += 25
+        if is_1hit_ko:
+            win_prob += 18
+        elif turns_to_ko == 2:
+            win_prob += 8
+
+        if cand_hp >= opp_hp:
+            win_prob += 8
+        if cand_survives:
+            win_prob += 8
+        else:
+            win_prob -= 12
+
+        if opp_hits_weakness:
+            win_prob -= 20
+
+        win_prob = max(15, min(98, win_prob))
+
+        if hits_weakness:
+            summary = f"Hits opponent weakness (2x) for {final_dmg} DMG ({'1-Hit KO' if is_1hit_ko else f'{turns_to_ko}-Turn KO'})"
+        else:
+            summary = f"Deals {final_dmg} DMG ({turns_to_ko}-Turn KO, {cand_hp} HP)"
+
+        return {
+            "name": candidate_name,
+            "hp": cand_hp,
+            "types": cand_types,
+            "best_attack": best_atk.get("name"),
+            "expected_damage": final_dmg,
+            "hits_weakness": hits_weakness,
+            "opp_hits_weakness": opp_hits_weakness,
+            "is_1hit_ko": is_1hit_ko,
+            "turns_to_ko": turns_to_ko,
+            "cand_survives": cand_survives,
+            "win_probability_val": win_prob,
+            "win_probability_pct": f"{win_prob}%",
+            "matchup_summary": summary
+        }
+
     def compute_winning_route(
         self,
         state: Dict[str, Any],
@@ -266,27 +354,99 @@ class PositionEvaluator:
             })
             current_step += 1
 
-        # 4. Hand Bench Deployment: If holding basic Pokémon and bench < 3
+        # 4. Hand Bench Deployment with Matchup & Weakness Evaluation
+        benched_candidate_name = None
         if len(p_bench) < 3:
-            basic_card = next((c for c in hand_card_names if self.card_db.is_basic_pokemon(c) and c != evo_card), None)
-            if basic_card:
+            basic_cards = [c for c in hand_card_names if self.card_db.is_basic_pokemon(c) and c != evo_card]
+            if basic_cards:
+                evals = [self.evaluate_pokemon_as_main(c, opp_act) for c in basic_cards]
+                evals.sort(key=lambda x: x["win_probability_val"], reverse=True)
+                best_cand = evals[0]
+                benched_candidate_name = best_cand["name"]
+
                 route_steps.append({
                     "step": current_step,
-                    "phase": "Hand Bench Power",
-                    "action": f"Deploy Basic [{basic_card}] from hand to Bench",
+                    "phase": "Hand Bench Power (Weakness Analysis)",
+                    "action": f"Deploy Best Matchup [{best_cand['name']}] from hand to Bench ({best_cand['win_probability_pct']} Win Possibility as Main)",
                     "action_type": "BENCH_POKEMON",
-                    "card_name": basic_card,
+                    "card_name": best_cand["name"],
+                    "winning_possibility": best_cand["win_probability_pct"],
+                    "weakness_exploited": best_cand["hits_weakness"],
                     "damage": 0,
                     "prizes_gained": 0,
                     "remaining_needed": p_prizes_needed,
-                    "strategic_impact": "Establishes reserve attacker to prevent bench-out loss."
+                    "strategic_impact": f"Evaluated hand Pokémon: [{best_cand['name']}] achieves {best_cand['win_probability_pct']} win possibility as main card ({best_cand['matchup_summary']}). Establishing on bench."
                 })
                 current_step += 1
 
-        # 5. Hand Energy Power (1/turn rule)
+        # 5. Tactical Switch / Escape Rope
+        switch_card = next((c for c in hand_card_names if any(s in c.lower() for s in ("switch", "rope", "escape"))), None)
+        if switch_card:
+            act_eval = self.evaluate_pokemon_as_main(player_act.get("name", ""), opp_act)
+            available_bench = [b.get("name") if isinstance(b, dict) else str(b) for b in p_bench]
+            if benched_candidate_name and benched_candidate_name not in available_bench:
+                available_bench.append(benched_candidate_name)
+
+            if available_bench:
+                bench_evals = [self.evaluate_pokemon_as_main(b, opp_act) for b in available_bench]
+                bench_evals.sort(key=lambda x: x["win_probability_val"], reverse=True)
+                best_bench = bench_evals[0]
+
+                if (best_bench["win_probability_val"] > act_eval["win_probability_val"]) or (best_bench["hits_weakness"] and not act_eval["hits_weakness"]):
+                    route_steps.append({
+                        "step": current_step,
+                        "phase": "Tactical Switch (Weakness Exploit)",
+                        "action": f"Play [{switch_card}] from hand to promote [{best_bench['name']}] to Active Spot ({best_bench['win_probability_pct']} Win Possibility)",
+                        "action_type": "PLAY_ITEM",
+                        "card_name": switch_card,
+                        "target_pokemon": best_bench["name"],
+                        "damage": 0,
+                        "prizes_gained": 0,
+                        "remaining_needed": p_prizes_needed,
+                        "strategic_impact": f"Switches active spot from [{player_act.get('name')}] ({act_eval['win_probability_pct']}) to [{best_bench['name']}] ({best_bench['win_probability_pct']}) to exploit opponent weakness and maximize win probability."
+                    })
+                    current_step += 1
+                    player_act = {"name": best_bench["name"], "current_hp": best_bench["hp"], "max_hp": best_bench["hp"]}
+                    p_act_hp = best_bench["hp"]
+
+        # 6. Supporter Disruption (Weakness Target)
+        boss_card = next((c for c in hand_card_names if any(b in c.lower() for b in ("boss", "gust", "catcher", "serena"))), None)
+        if boss_card and not supporter_used and opp_bench:
+            p_meta = self.card_db.get_meta(player_act.get("name", ""))
+            p_types = p_meta.get("types", ["Colorless"])
+            target_opp = None
+            for ob in opp_bench:
+                ob_name = ob.get("name") if isinstance(ob, dict) else str(ob)
+                ob_meta = self.card_db.get_meta(ob_name)
+                ob_weak = ob_meta.get("weaknesses", [])
+                if any(w.get("type") in p_types for w in ob_weak if isinstance(w, dict)):
+                    target_opp = ob
+                    break
+            if not target_opp:
+                target_opp = min(opp_bench, key=lambda b: (b.get("current_hp", 70) if isinstance(b, dict) else 70))
+
+            target_opp_name = target_opp.get("name") if isinstance(target_opp, dict) else str(target_opp)
+            route_steps.append({
+                "step": current_step,
+                "phase": "Supporter Disruption (Weakness Target)",
+                "action": f"Play [{boss_card}] to drag opponent's vulnerable [{target_opp_name}] into Active Spot",
+                "action_type": "PLAY_SUPPORTER",
+                "card_name": boss_card,
+                "target_pokemon": target_opp_name,
+                "damage": 0,
+                "prizes_gained": 0,
+                "remaining_needed": p_prizes_needed,
+                "strategic_impact": f"Gusts opponent's [{target_opp_name}] into active spot to exploit weakness and secure prize knockout."
+            })
+            current_step += 1
+            supporter_used = True
+            opp_act = target_opp if isinstance(target_opp, dict) else {"name": target_opp_name, "current_hp": 70}
+            opp_hp = int(opp_act.get("current_hp", 70) or 70)
+
+        # 7. Hand Energy Power (1/turn rule)
         energy_card = next((c for c in hand_card_names if "energy" in c.lower()), None)
         if not turn_energy_used and (energy_card or best_action.get("action_type") == "ATTACH_ENERGY"):
-            target_pkmn = best_action.get('target_pokemon') or player_act.get('name', 'Active')
+            target_pkmn = player_act.get('name', 'Active')
             e_name = energy_card or best_action.get('card_name') or "Basic Energy"
             route_steps.append({
                 "step": current_step,
@@ -301,32 +461,38 @@ class PositionEvaluator:
             })
             current_step += 1
 
-        # 6. Terminal Offensive Strike for Current Turn
+        # 8. Terminal Offensive Strike for Current Turn
         p_active_meta = self.card_db.get_meta(player_act.get("name", ""))
         attacks = p_active_meta.get("attacks", [])
         top_atk = attacks[0] if attacks else {"name": "Strike", "base_damage": 40}
         act_type = best_action.get("action_type")
-        if act_type == "ATTACK":
+        if act_type == "ATTACK" and player_act.get("name") == (state.get("player", {}).get("active_spot", {}).get("name")):
             atk_name = best_action.get("attack_name", top_atk.get("name", "Strike"))
             base_dmg = int(best_action.get("base_damage", top_atk.get("base_damage", 40)) or 40)
         else:
-            atk_name = top_atk.get("name", "Strike")
+            atk_name = top_atk.get("name", f"{player_act.get('name')} Strike")
             base_dmg = int(top_atk.get("base_damage", 40) or 40)
 
-        is_lethal = base_dmg >= opp_hp and opp_hp > 0
+        p_types = p_active_meta.get("types", ["Colorless"])
+        opp_meta = self.card_db.get_meta(opp_act.get("name", ""))
+        opp_weak = opp_meta.get("weaknesses", [])
+        is_weak = any(w.get("type") in p_types for w in opp_weak if isinstance(w, dict))
+        strike_dmg = base_dmg * (2 if is_weak else 1)
+
+        is_lethal = strike_dmg >= opp_hp and opp_hp > 0
         prizes = opp_prizes_val if is_lethal else 0
         prizes_mapped += prizes
 
         route_steps.append({
             "step": current_step,
             "phase": "Turn 1 Offensive Strike",
-            "action": f"Strike active [{opp_act.get('name')}] with [{atk_name}] for {base_dmg} DMG",
+            "action": f"Strike active [{opp_act.get('name')}] with [{atk_name}] for {strike_dmg} DMG{' (WEAKNESS x2!)' if is_weak else ''}",
             "action_type": "ATTACK",
             "attack_name": atk_name,
-            "damage": base_dmg,
+            "damage": strike_dmg,
             "prizes_gained": prizes,
             "remaining_needed": max(0, p_prizes_needed - prizes_mapped),
-            "strategic_impact": "Secures lethal knockout and prize pickup." if is_lethal else "Pressures active Pokémon to set up lethal prize extraction next turn."
+            "strategic_impact": f"Secures lethal knockout on [{opp_act.get('name')}]!" if is_lethal else f"Deals {strike_dmg} DMG to [{opp_act.get('name')}] to set up knockout."
         })
         current_step += 1
 
@@ -341,6 +507,7 @@ class PositionEvaluator:
                 "step": current_step,
                 "phase": "Turn 2 Follow-up",
                 "action": f"Target [{target_bench.get('name')}] for prize pickup",
+                "action_type": "ATTACK",
                 "damage": 120,
                 "prizes_gained": target_prizes,
                 "remaining_needed": max(0, p_prizes_needed - prizes_mapped),
@@ -355,6 +522,7 @@ class PositionEvaluator:
                 "step": current_step,
                 "phase": "Turn 3 Game-Winning Closer",
                 "action": f"Execute final Boss's Orders / Heavy Attack to claim final {final_prizes} Prize(s)",
+                "action_type": "ATTACK",
                 "damage": 180,
                 "prizes_gained": final_prizes,
                 "remaining_needed": 0,

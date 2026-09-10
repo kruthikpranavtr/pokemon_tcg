@@ -1951,6 +1951,51 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             }
         }
 
+        function getCardImageUrl(meta, cardName) {
+            if (meta && meta.image) return meta.image;
+            const cname = (cardName || (meta ? meta.name : '')).toLowerCase().trim();
+            const cleanName = cname.replace(/ ex$/, '').replace(/ v$/, '').trim();
+
+            const POKEDEX_MAP = {
+                'bulbasaur': 1, 'ivysaur': 2, 'venusaur': 3,
+                'charmander': 4, 'charmeleon': 5, 'charizard': 6,
+                'squirtle': 7, 'wartortle': 8, 'blastoise': 9,
+                'caterpie': 10, 'metapod': 11, 'butterfree': 12,
+                'pikachu': 25, 'raichu': 26,
+                'jigglypuff': 39, 'wigglytuff': 40,
+                'machop': 66, 'machoke': 67, 'machamp': 68,
+                'gengar': 94, 'onix': 95,
+                'eevee': 133, 'vaporeon': 134, 'jolteon': 135, 'flareon': 136,
+                'snorlax': 143, 'articuno': 144, 'zapdos': 145, 'moltres': 146,
+                'dratini': 147, 'dragonair': 148, 'dragonite': 149,
+                'mewtwo': 150, 'mew': 151,
+                'miraidon': 1008, 'koraidon': 1007,
+                'potion': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png',
+                'super potion': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/super-potion.png',
+                'poke ball': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png',
+                'ultra ball': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png',
+                'switch': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/escape-rope.png'
+            };
+
+            for (let [k, v] of Object.entries(POKEDEX_MAP)) {
+                if (cleanName.includes(k)) {
+                    if (typeof v === 'number') {
+                        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${v}.png`;
+                    }
+                    return v;
+                }
+            }
+
+            if (meta && meta.dataset_id) {
+                const num = parseInt(String(meta.dataset_id).replace(/\D/g, ''));
+                if (num && num >= 1 && num <= 1025) {
+                    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${num}.png`;
+                }
+            }
+
+            return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png`;
+        }
+
         function renderActiveCard(containerId, pkmn, isPlayer) {
             const box = document.getElementById(containerId);
             if (!box || !pkmn) return;
@@ -1959,6 +2004,8 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             const maxHp = pkmn.max_hp || meta.hp || 100;
             const currHp = Math.max(0, pkmn.current_hp);
             const hpPct = Math.max(0, Math.min(100, (currHp / maxHp) * 100));
+            const imgUrl = getCardImageUrl(meta, pkmn.name);
+            const ptype = meta.pokemon_type || (meta.types && meta.types[0]) || 'Normal';
 
             let attacksHtml = '';
             const attacks = meta.attacks && meta.attacks.length > 0 ? meta.attacks : [{ name: "Strike", base_damage: 40, cost: ["Colorless"] }];
@@ -1988,17 +2035,32 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                 : '<span style="color:var(--text-dim); font-size:0.7rem;">None Attached</span>';
 
             box.innerHTML = `
-                <div style="font-family:var(--font-orbitron); font-size:0.95rem; color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; font-weight:900;">
-                    ${isPlayer ? '👑 YOUR' : '👑 OPPONENT'} ACTIVE: ${pkmn.name}
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <div style="font-family:var(--font-orbitron); font-size:0.92rem; color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; font-weight:900;">
+                        ${isPlayer ? '👑 YOUR' : '👑 OPPONENT'} ACTIVE: ${pkmn.name}
+                    </div>
+                    <span class="cyber-badge" style="font-size:0.65rem; padding:2px 6px;">${ptype}</span>
                 </div>
-                <div style="font-size:0.78rem; font-weight:800; margin-top:3px;">
-                    HP: <span style="color:${currHp < 40 ? '#ef4444' : '#34d399'};">${currHp}</span> / ${maxHp}
+
+                <div style="display:flex; gap:12px; align-items:flex-start;">
+                    <!-- Main Pokemon Card Image -->
+                    <div class="active-card-img-box" style="width:85px; height:110px; min-width:85px; background:rgba(2,4,9,0.85); border:2px solid ${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px ${isPlayer ? 'rgba(0,243,255,0.25)' : 'rgba(255,0,85,0.25)'}; position:relative;">
+                        <img src="${imgUrl}" alt="${pkmn.name}" style="max-width:100%; max-height:100%; object-fit:contain;"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display:none; font-size:2.2rem;">🐉</div>
+                    </div>
+
+                    <div style="flex:1;">
+                        <div style="font-size:0.8rem; font-weight:800;">
+                            HP: <span style="color:${currHp < 40 ? '#ef4444' : '#34d399'};">${currHp}</span> / ${maxHp}
+                        </div>
+                        <div style="height:6px; background:#111; border-radius:3px; margin:4px 0; overflow:hidden;">
+                            <div style="width:${hpPct}%; background:${currHp < 40 ? '#ef4444' : (currHp < 80 ? '#f59e0b' : '#10b981')}; height:100%; transition:width 0.3s;"></div>
+                        </div>
+                        <div style="font-size:0.7rem; margin:4px 0;"><b>ENERGY:</b> ${energyDisplay}</div>
+                        <div>${attacksHtml}</div>
+                    </div>
                 </div>
-                <div style="height:6px; background:#111; border-radius:3px; margin:4px 0; overflow:hidden;">
-                    <div style="width:${hpPct}%; background:${currHp < 40 ? '#ef4444' : (currHp < 80 ? '#f59e0b' : '#10b981')}; height:100%; transition:width 0.3s;"></div>
-                </div>
-                <div style="font-size:0.7rem; margin:4px 0;"><b>ENERGY:</b> ${energyDisplay}</div>
-                <div>${attacksHtml}</div>
             `;
         }
 
@@ -2012,11 +2074,20 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             box.innerHTML = bench.map((b, i) => {
                 const maxHp = b.max_hp || 70;
                 const currHp = Math.max(0, b.current_hp);
+                const meta = getCardMeta(b.name);
+                const thumbUrl = getCardImageUrl(meta, b.name);
                 return `
-                    <div style="background:rgba(2,4,9,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; font-size:0.7rem;">
-                        <div style="display:flex; justify-content:space-between; font-weight:800;">
-                            <span style="color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'};">#${i+1}: ${b.name}</span>
-                            <span style="color:#34d399;">${currHp}/${maxHp} HP</span>
+                    <div style="background:rgba(2,4,9,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; font-size:0.7rem; display:flex; align-items:center; gap:8px;">
+                        <div style="width:34px; height:42px; min-width:34px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.2); border-radius:4px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                            <img src="${thumbUrl}" alt="${b.name}" style="max-width:100%; max-height:100%; object-fit:contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div style="display:none; font-size:1rem;">🛡️</div>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="display:flex; justify-content:space-between; font-weight:800;">
+                                <span style="color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'};">#${i+1}: ${b.name}</span>
+                                <span style="color:#34d399;">${currHp}/${maxHp} HP</span>
+                            </div>
+                            <div style="font-size:0.62rem; color:var(--text-dim); margin-top:2px;">Type: ${meta.pokemon_type || 'Basic'}</div>
                         </div>
                     </div>
                 `;
@@ -2190,7 +2261,15 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     const bench = CURRENT_MATCH_STATE.player.bench || [];
                     if (bench.length > 0) {
                         const oldActive = CURRENT_MATCH_STATE.player.active_spot;
-                        const newActive = bench.shift();
+                        let targetIdx = 0;
+                        if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
+                            const curStep = LAST_AI_REPORT.winning_route.steps[CURRENT_ROUTE_STEP_INDEX];
+                            if (curStep && curStep.target_pokemon) {
+                                const fIdx = bench.findIndex(b => b.name.toLowerCase() === curStep.target_pokemon.toLowerCase());
+                                if (fIdx !== -1) targetIdx = fIdx;
+                            }
+                        }
+                        const newActive = bench.splice(targetIdx, 1)[0];
                         CURRENT_MATCH_STATE.player.active_spot = {
                             name: newActive.name,
                             current_hp: newActive.current_hp,
@@ -2203,7 +2282,7 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                             max_hp: oldActive.max_hp,
                             attached_energy: oldActive.attached_energy || []
                         });
-                        CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: Switched active [${oldActive.name}] with [${newActive.name}] from bench!`);
+                        CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: Switched active [${oldActive.name}] with [${newActive.name}] from bench to exploit matchup!`);
                     } else {
                         CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: No benched Pokémon available to switch.`);
                     }
@@ -2213,8 +2292,16 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                 else if (clean.includes('boss') || clean.includes('gust')) {
                     const oppBench = CURRENT_MATCH_STATE.opponent.bench || [];
                     if (oppBench.length > 0) {
+                        let targetIdx = 0;
+                        if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
+                            const curStep = LAST_AI_REPORT.winning_route.steps[CURRENT_ROUTE_STEP_INDEX];
+                            if (curStep && curStep.target_pokemon) {
+                                const fIdx = oppBench.findIndex(b => b.name.toLowerCase() === curStep.target_pokemon.toLowerCase());
+                                if (fIdx !== -1) targetIdx = fIdx;
+                            }
+                        }
                         const oldOpp = CURRENT_MATCH_STATE.opponent.active_spot;
-                        const newOpp = oppBench.shift();
+                        const newOpp = oppBench.splice(targetIdx, 1)[0];
                         CURRENT_MATCH_STATE.opponent.active_spot = {
                             name: newOpp.name,
                             current_hp: newOpp.current_hp,
@@ -2427,6 +2514,15 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             CURRENT_ROUTE_STEP_INDEX = 0;
             CURRENT_MATCH_STATE.turn_number++;
             CURRENT_MATCH_STATE.match_log.push(`--- Turn ${CURRENT_MATCH_STATE.turn_number}: Your Turn ---`);
+
+            // Automatic Turn-Start Deck Draw per official Pokemon TCG rules!
+            if (CURRENT_MATCH_STATE.player.deck && CURRENT_MATCH_STATE.player.deck.length > 0) {
+                const drawnCard = CURRENT_MATCH_STATE.player.deck.pop();
+                CURRENT_MATCH_STATE.player.hand.push(drawnCard);
+                CURRENT_MATCH_STATE.card_drawn_this_turn = true;
+                CURRENT_MATCH_STATE.match_log.push(`🎴 Turn ${CURRENT_MATCH_STATE.turn_number} Start Draw: Took 1 card [${drawnCard}] from deck into hand.`);
+            }
+
             IS_AI_PROCESSING = false;
             updateMatchView(CURRENT_MATCH_STATE);
             runDynamicAiAnalysis(CURRENT_MATCH_STATE);
@@ -2689,7 +2785,8 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                             const meta = getCardMeta(c);
                             const stype = (meta.card_type || meta.supertype || '').toLowerCase();
                             return stype.includes('trainer') || stype.includes('item') || stype.includes('supporter') ||
-                                   c.toLowerCase().includes('potion') || c.toLowerCase().includes('research') || c.toLowerCase().includes('ball');
+                                   c.toLowerCase().includes('potion') || c.toLowerCase().includes('research') || c.toLowerCase().includes('ball') ||
+                                   c.toLowerCase().includes('switch') || c.toLowerCase().includes('rope') || c.toLowerCase().includes('boss');
                         });
 
                         const prevIdx = CURRENT_ROUTE_STEP_INDEX;
