@@ -22,6 +22,8 @@ from src.models.card_vision_gnn import CardVisionGNN
 from src.models.decision_transformer import MatchSequenceTransformer
 from src.engine.mcts_engine import MCTSEngine
 from src.engine.tcg_match_engine import TCGMatchEngine
+from src.tcg_ai.engine import TCGStrategicAIEngine, OperationalMode
+
 
 # Default API Key configuration (can be overridden by environment variable)
 VALID_API_KEYS = {
@@ -188,6 +190,18 @@ class DeckOptimizeRequest(BaseModel):
     seed_cards: Optional[List[Dict[str, Any]]] = Field(default=[])
 
 
+class AnalyzeRequest(BaseModel):
+    game_state: Optional[Dict[str, Any]] = None
+    our_cards: Optional[PlayerCardsInput] = None
+    opponent_cards: Optional[OpponentCardsInput] = None
+    turn_context: Optional[TurnContext] = None
+    mode: Optional[str] = Field(default="BALANCED", description="Operational mode: FAST, BALANCED, DEEP, or TOURNAMENT")
+    simulation_budget: Optional[int] = Field(default=None, description="Optional override for MCTS simulation count")
+    search_depth: Optional[int] = Field(default=None, description="Optional override for search depth")
+    opponent_strategy: Optional[str] = Field(default=None, description="AGGRESSIVE, DEFENSIVE, PRIZE_RACE, SETUP, or OPTIMAL")
+
+
+
 # --- CORE INFERENCE PIPELINE (GNN + TRANSFORMER + MCTS) ---
 def process_recommendation_inference(
     game_state: Dict[str, Any],
@@ -262,6 +276,15 @@ def process_recommendation_inference(
 
     top_move = turn_recommendations[0] if turn_recommendations else None
 
+    # Compute Winning Route via Strategic AI Evaluator
+    winning_route = None
+    try:
+        strat_engine = TCGStrategicAIEngine.get_instance()
+        best_act = top_move.get("action_details") if top_move else (legal_actions[0] if legal_actions else {"action_type": "PASS_TURN"})
+        winning_route = strat_engine.evaluator.compute_winning_route(game_state, best_act)
+    except Exception as e:
+        print(f"Notice: Winning Route calculation fallback ({e})")
+
     return {
         "status": "success",
         "session_id": session_id,
@@ -280,11 +303,13 @@ def process_recommendation_inference(
         },
         "top_recommended_move": top_move,
         "all_recommended_moves": turn_recommendations[:6],
+        "winning_route": winning_route,
         "mcts_search_telemetry": mcts_telemetry,
         "gnn_board_telemetry": gnn_telemetry,
         "transformer_telemetry": transformer_telemetry,
         "prize_map_summary": prize_map
     }
+
 
 
 # --- API ROUTES ---
@@ -359,7 +384,56 @@ def recommend_action(
     )
 
 
+@app.post("/analyze")
+@app.post("/api/v1/analyze")
+def analyze_game_state(
+    req: AnalyzeRequest,
+    api_key: Optional[str] = Security(api_key_header),
+    query_key: Optional[str] = Security(api_key_query)
+):
+    """
+    Standard TCG Strategic AI Analysis Endpoint.
+    Analyzes game state with Bayesian POMDP belief tracking, progressive MCTS lookahead,
+    opponent behavioral sampling, and multi-turn Winning Route extraction.
+    Returns the standard 9-point structured analysis.
+    """
+    if req.game_state:
+        state = req.game_state
+    elif req.our_cards and req.opponent_cards:
+        our_dict = req.our_cards.model_dump() if hasattr(req.our_cards, "model_dump") else req.our_cards.dict()
+        opp_dict = req.opponent_cards.model_dump() if hasattr(req.opponent_cards, "model_dump") else req.opponent_cards.dict()
+        ctx_dict = (req.turn_context.model_dump() if hasattr(req.turn_context, "model_dump") else req.turn_context.dict()) if req.turn_context else {}
+        state = card_resolver.build_game_state(
+            our_cards=our_dict,
+            opponent_cards=opp_dict,
+            turn_context=ctx_dict
+        )
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Must provide either 'game_state' or ('our_cards' and 'opponent_cards')."
+        )
+
+    mode = (req.mode or "BALANCED").upper()
+    if mode not in [OperationalMode.FAST, OperationalMode.BALANCED, OperationalMode.DEEP, OperationalMode.TOURNAMENT]:
+        mode = OperationalMode.BALANCED
+
+    engine = TCGStrategicAIEngine.get_instance()
+    try:
+        report = engine.analyze(
+            game_state=state,
+            mode=mode,
+            simulation_budget=req.simulation_budget,
+            search_depth=req.search_depth,
+            opponent_strategy=req.opponent_strategy
+        )
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Strategic AI Analysis error: {str(e)}")
+
+
 @app.post("/api/v1/optimize-deck")
+
 def optimize_deck(
     req: DeckOptimizeRequest,
     api_key: str = Depends(verify_api_key)

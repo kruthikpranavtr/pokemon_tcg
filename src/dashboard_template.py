@@ -520,7 +520,23 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             display: flex;
             flex-direction: column;
             gap: 14px;
+            max-height: 940px;
+            overflow-y: auto;
         }
+        .side-column-panel::-webkit-scrollbar {
+            width: 5px;
+        }
+        .side-column-panel::-webkit-scrollbar-track {
+            background: rgba(2, 4, 9, 0.6);
+        }
+        .side-column-panel::-webkit-scrollbar-thumb {
+            background: rgba(0, 243, 255, 0.3);
+            border-radius: 3px;
+        }
+        .side-column-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-cyan);
+        }
+
 
         .tcg-playmat-container {
             background: rgba(6, 11, 23, 0.95);
@@ -883,20 +899,43 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             <div class="app-3col-layout">
                 <!-- LEFT COLUMN: AI RECOMMENDATION SYSTEM -->
                 <div class="side-column-panel">
-                    <div class="section-label" style="color:var(--neon-cyan);"><span>🧠 AI RECOMMENDATION SYSTEM</span></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="section-label" style="color:var(--neon-cyan); margin-bottom:0;"><span>🧠 AI STRATEGIC ENGINE</span></div>
+                        <span id="left-engine-badge" class="cyber-badge" style="font-size:0.6rem; padding:2px 6px;">POMDP MCTS</span>
+                    </div>
+
+                    <!-- WIN RATE & CONFIDENCE INTERVAL -->
                     <div style="background:rgba(2,4,9,0.8); border:1px solid rgba(0,243,255,0.2); border-radius:8px; padding:10px; text-align:center;">
                         <div style="font-size:0.7rem; color:var(--text-dim); font-family:var(--font-orbitron);">LIVE MATCH WIN RATE</div>
                         <div id="left-win-pct" style="font-family:var(--font-orbitron); font-size:1.8rem; font-weight:900; color:var(--neon-cyan);">--%</div>
+                        <div id="left-confidence-interval" style="font-size:0.68rem; color:#94a3b8; font-family:var(--font-mono); margin-top:2px;">95% CI: [--%, --%] &bull; 100 Sims</div>
                     </div>
                     
+                    <!-- TOP RECOMMENDED ACTION -->
                     <div style="background:rgba(2,4,9,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px;">
                         <div style="font-family:var(--font-orbitron); font-size:0.7rem; color:var(--neon-cyan); margin-bottom:4px;">TOP RECOMMENDED ACTION</div>
                         <div id="left-rec-action" style="font-family:var(--font-orbitron); font-size:0.88rem; font-weight:800; color:#fff;">Evaluating Match State...</div>
                         <div id="left-rec-desc" style="font-size:0.78rem; color:#cbd5e1; margin-top:4px; line-height:1.3;">AI Engine computes real-time optimal plays from the arena...</div>
                     </div>
 
+                    <!-- THE WINNING ROUTE ROADMAP -->
+                    <div id="left-winning-route-box" style="background:rgba(0,243,255,0.04); border:1px solid rgba(0,243,255,0.3); border-radius:8px; padding:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <div style="font-family:var(--font-orbitron); font-size:0.72rem; color:var(--neon-cyan); font-weight:800;">🎯 THE WINNING ROUTE</div>
+                            <span id="left-route-turns" class="cyber-badge" style="font-size:0.62rem; padding:1px 6px; border-color:var(--neon-green); color:var(--neon-green);">3 TURNS</span>
+                        </div>
+                        <div id="left-route-summary" style="font-size:0.75rem; color:#e2f3fe; margin-bottom:8px; font-weight:600;">Mapping optimal prize extraction sequence...</div>
+                        <div id="left-route-steps" style="display:flex; flex-direction:column; gap:6px; font-size:0.72rem;">
+                            <!-- Steps rendered dynamically -->
+                        </div>
+                        <div id="left-route-condition" style="margin-top:8px; font-size:0.68rem; color:#fbbf24; font-family:var(--font-mono); border-top:1px dashed rgba(255,255,255,0.1); padding-top:6px;">
+                            💡 Key: Maintain energy tempo and protect bench attackers.
+                        </div>
+                    </div>
+
+                    <!-- TOP RANKED PLAYS WITH DELTAS -->
                     <div style="background:rgba(2,4,9,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px;">
-                        <div style="font-family:var(--font-orbitron); font-size:0.7rem; color:var(--neon-amber); margin-bottom:4px;">TOP RANKED PLAYS</div>
+                        <div style="font-family:var(--font-orbitron); font-size:0.7rem; color:var(--neon-amber); margin-bottom:4px;">TOP RANKED PLAYS &bull; Δ%</div>
                         <div id="left-ranked-list" style="font-size:0.75rem; display:flex; flex-direction:column; gap:4px;">
                             <div>1. Calculating optimal play...</div>
                             <div>2. Evaluating counter-attacks...</div>
@@ -904,8 +943,31 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                         </div>
                     </div>
 
-                    <button class="btn-action-main" style="width:100%; padding:10px; font-size:0.8rem;" onclick="executeAiRecommendation()">⚡ EXECUTE AI PLAY</button>
+                    <!-- PREDICTED OPPONENT COUNTER & RESPONSE -->
+                    <div id="left-opponent-responses-box" style="background:rgba(255,0,127,0.04); border:1px solid rgba(255,0,127,0.25); border-radius:8px; padding:10px;">
+                        <div style="font-family:var(--font-orbitron); font-size:0.7rem; color:var(--neon-magenta); margin-bottom:4px;">🔮 PREDICTED OPPONENT COUNTER</div>
+                        <div id="left-opp-dangerous" style="font-size:0.75rem; color:#fca5a5; font-weight:700;">Anticipating opponent counter-offensive...</div>
+                        <div id="left-opp-counter" style="font-size:0.72rem; color:#cbd5e1; margin-top:4px; line-height:1.3;">Counter-strategy: Preserve bench reserve security.</div>
+                    </div>
+
+                    <!-- MATHEMATICAL FORMULA & EXPECTED VALUE -->
+                    <div id="left-math-analysis-box" style="background:rgba(2,4,9,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 10px; font-family:var(--font-mono); font-size:0.68rem;">
+                        <div style="color:var(--text-dim); margin-bottom:3px;">FORMULA:</div>
+                        <div id="left-math-formula" style="color:var(--neon-cyan); word-break:break-all;">Damage = (Base + Bonus) * Weakness - Resist</div>
+                        <div id="left-math-ev" style="color:#94a3b8; margin-top:4px;">EV: +0.5000 &bull; Knockout: 50% &bull; Risk: LOW</div>
+                    </div>
+
+                    <!-- CONTROLS -->
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button id="btn-compute-winning-route" class="btn-action-main" style="width:100%; padding:9px; font-size:0.78rem; border-color:var(--neon-cyan);" onclick="fetchStrategicAiAnalysis('BALANCED')">
+                            🧠 COMPUTE WINNING ROUTE
+                        </button>
+                        <button id="btn-execute-ai" class="btn-action-main" style="width:100%; padding:9px; font-size:0.78rem; border-color:var(--neon-green); color:#fff;" onclick="executeAiRecommendation()">
+                            ⚡ EXECUTE AI PLAY
+                        </button>
+                    </div>
                 </div>
+
 
                 <!-- CENTER COLUMN: TCG BATTLE ARENA PLAYMAT -->
                 <div class="tcg-playmat-container">
@@ -1637,6 +1699,12 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             if (!cname) return { name: "Unknown", card_type: "pokemon", stage: "Basic", hp: 70, pokemon_type: "Normal", attacks: [] };
             const clean = cname.toLowerCase().trim();
             if (OWNED_CARDS_MAP[clean]) return OWNED_CARDS_MAP[clean];
+            if (clean.includes('energy')) {
+                return { name: cname, card_type: "energy", supertype: "Energy", stage: "" };
+            }
+            if (clean.includes('potion') || clean.includes('research') || clean.includes('ball') || clean.includes('switch') || clean.includes('boss') || clean.includes('trainer') || clean.includes('supporter') || clean.includes('item') || clean.includes('rope')) {
+                return { name: cname, card_type: "trainer", supertype: "Trainer", stage: "" };
+            }
             const isEx = clean.includes('ex');
             return {
                 name: cname,
@@ -1757,12 +1825,15 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             const oppBench2Meta = getCardMeta(oppBasics[2]);
             const oppBench3Meta = getCardMeta(oppBasics[3]);
 
+            CURRENT_ROUTE_STEP_INDEX = 0;
             CURRENT_MATCH_STATE = {
                 turn_number: 1,
                 is_player_turn: true,
                 card_drawn_this_turn: false,
+                energy_attached_this_turn: false,
                 winner: null,
                 player: {
+
                     name: CURRENT_USER ? CURRENT_USER.username : "Player",
                     active_spot: {
                         name: pActiveName,
@@ -1837,6 +1908,27 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     drawBtn.innerHTML = `🃏 DRAW DECK CARD (<span id="p-deck-count">${deckCount}</span> REMAINING)`;
                 }
             }
+
+            const energyBtn = document.getElementById('btn-add-energy-main');
+            if (energyBtn) {
+                if (state.energy_attached_this_turn) {
+                    energyBtn.disabled = true;
+                    energyBtn.style.opacity = '0.5';
+                    energyBtn.style.cursor = 'not-allowed';
+                    energyBtn.innerHTML = `⚡ ENERGY ATTACHED (1/TURN USED)`;
+                } else if (!state.is_player_turn || IS_AI_PROCESSING || state.winner) {
+                    energyBtn.disabled = true;
+                    energyBtn.style.opacity = '0.5';
+                    energyBtn.style.cursor = 'not-allowed';
+                    energyBtn.innerHTML = `⚡ + ATTACH ENERGY (1/TURN)`;
+                } else {
+                    energyBtn.disabled = false;
+                    energyBtn.style.opacity = '1';
+                    energyBtn.style.cursor = 'pointer';
+                    energyBtn.innerHTML = `⚡ + ATTACH ENERGY (1/TURN)`;
+                }
+            }
+
 
             renderActiveCard('player-active-view', state.player.active_spot, true);
             renderActiveCard('opp-active-view', state.opponent.active_spot, false);
@@ -1985,11 +2077,59 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             runDynamicAiAnalysis(CURRENT_MATCH_STATE);
         }
 
+        function getPokemonMaxEnergyLimit(pkmnName) {
+            const meta = getCardMeta(pkmnName);
+            let maxCost = 1;
+            if (meta && meta.attacks && Array.isArray(meta.attacks)) {
+                meta.attacks.forEach(a => {
+                    const c = (a.cost || []).length || 1;
+                    if (c > maxCost) maxCost = c;
+                });
+            }
+            return Math.min(4, Math.max(2, maxCost + 1));
+        }
+
+        function advanceWinningRouteStepIfType(actionType) {
+            if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
+                const steps = LAST_AI_REPORT.winning_route.steps;
+                if (CURRENT_ROUTE_STEP_INDEX < steps.length) {
+                    const currentStep = steps[CURRENT_ROUTE_STEP_INDEX];
+                    const stepType = (currentStep.action_type || currentStep.action || '').toUpperCase();
+                    if (stepType.includes(actionType.toUpperCase()) || 
+                       (actionType.startsWith('PLAY_') && stepType.startsWith('PLAY_'))) {
+                        CURRENT_ROUTE_STEP_INDEX++;
+                    }
+                }
+            }
+        }
+
         function promptAddEnergyDirect(target) {
-            if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) return;
-            CURRENT_MATCH_STATE.player.active_spot.attached_energy.push("Basic Energy");
-            CURRENT_MATCH_STATE.match_log.push(`⚡ Attached 1 Energy to active [${CURRENT_MATCH_STATE.player.active_spot.name}].`);
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+            if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
+                alert("⏳ Please wait! It is the Opponent AI's turn.");
+                return;
+            }
+            if (CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                alert("⚡ Energy Rule: You can only attach 1 energy from hand per turn!");
+                return;
+            }
+            const pActive = CURRENT_MATCH_STATE.player.active_spot;
+            const limit = getPokemonMaxEnergyLimit(pActive.name);
+            const currentEnergy = (pActive.attached_energy || []).length;
+            if (currentEnergy >= limit) {
+                alert(`⚠️ Energy Limit: [${pActive.name}] already has ${currentEnergy} energy attached (max saturation limit: ${limit}).`);
+                return;
+            }
+
+            pActive.attached_energy.push("Basic Energy");
+            CURRENT_MATCH_STATE.energy_attached_this_turn = true;
+            CURRENT_MATCH_STATE.match_log.push(`⚡ Attached 1 Energy to active [${pActive.name}] (${pActive.attached_energy.length}/${limit}).`);
+
+            advanceWinningRouteStepIfType("ATTACH_ENERGY");
             updateMatchView(CURRENT_MATCH_STATE);
+            if (LAST_AI_REPORT) {
+                renderStrategicAiReport(LAST_AI_REPORT);
+            }
         }
 
         function matchPlayCard(cname) {
@@ -1998,23 +2138,141 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             const idx = hand.indexOf(cname);
             if (idx === -1) return;
 
+            const clean = cname.toLowerCase().trim();
             const meta = getCardMeta(cname);
             const stype = (meta.card_type || meta.supertype || '').toLowerCase();
             const stage = meta.stage || '';
 
-            // 1. Basic Pokemon -> Bench
-            if (stype.includes('pok') && isBasicPokemon(meta)) {
-                const bench = CURRENT_MATCH_STATE.player.bench || [];
-                if (bench.length >= 3) {
-                    alert("⚠️ Bench is full (max 3 Pokémon slots)!");
+            const isEnergy = stype.includes('energy') || clean.includes('energy');
+            const isTrainer = stype.includes('trainer') || stype.includes('item') || stype.includes('supporter') ||
+                clean.includes('potion') || clean.includes('research') || clean.includes('ball') || clean.includes('switch') || clean.includes('boss') || clean.includes('rope');
+
+            // 1. Trainer / Item / Supporter
+            if (isTrainer) {
+                hand.splice(idx, 1);
+                // 1A. Potion / Healing Items
+                if (clean.includes('potion')) {
+                    const healAmt = clean.includes('super') ? 60 : 30;
+                    const pActive = CURRENT_MATCH_STATE.player.active_spot;
+                    const oldHp = pActive.current_hp;
+                    pActive.current_hp = Math.min(pActive.max_hp || 70, (pActive.current_hp || 0) + healAmt);
+                    const healed = pActive.current_hp - oldHp;
+                    CURRENT_MATCH_STATE.match_log.push(`💊 Played [${cname}] from hand: Healed ${healed} HP on active [${pActive.name}] (${pActive.current_hp}/${pActive.max_hp}).`);
+                    advanceWinningRouteStepIfType("PLAY_ITEM");
+                }
+                // 1B. Research / Draw Cards
+                else if (clean.includes('research') || clean.includes('draw') || clean.includes('iono') || clean.includes('cheren')) {
+                    let drawnCards = [];
+                    for (let i = 0; i < 2; i++) {
+                        if (CURRENT_MATCH_STATE.player.deck && CURRENT_MATCH_STATE.player.deck.length > 0) {
+                            drawnCards.push(CURRENT_MATCH_STATE.player.deck.pop());
+                        }
+                    }
+                    CURRENT_MATCH_STATE.player.hand.push(...drawnCards);
+                    CURRENT_MATCH_STATE.match_log.push(`📜 Played [${cname}] from hand: Drew ${drawnCards.length} cards into hand!`);
+                    advanceWinningRouteStepIfType("PLAY_SUPPORTER");
+                }
+                // 1C. Ball / Search Cards
+                else if (clean.includes('ball')) {
+                    const deck = CURRENT_MATCH_STATE.player.deck || [];
+                    const bIdx = deck.findIndex(c => isBasicPokemon(getCardMeta(c)));
+                    if (bIdx !== -1) {
+                        const found = deck.splice(bIdx, 1)[0];
+                        CURRENT_MATCH_STATE.player.hand.push(found);
+                        CURRENT_MATCH_STATE.match_log.push(`🎾 Played [${cname}] from hand: Searched collection deck for Basic [${found}] and added to hand!`);
+                    } else {
+                        CURRENT_MATCH_STATE.match_log.push(`🎾 Played [${cname}] from hand: Searched deck, but no Basic Pokémon found.`);
+                    }
+                    advanceWinningRouteStepIfType("PLAY_ITEM");
+                }
+                // 1D. Switch / Escape Rope
+                else if (clean.includes('switch') || clean.includes('rope')) {
+                    const bench = CURRENT_MATCH_STATE.player.bench || [];
+                    if (bench.length > 0) {
+                        const oldActive = CURRENT_MATCH_STATE.player.active_spot;
+                        const newActive = bench.shift();
+                        CURRENT_MATCH_STATE.player.active_spot = {
+                            name: newActive.name,
+                            current_hp: newActive.current_hp,
+                            max_hp: newActive.max_hp,
+                            attached_energy: newActive.attached_energy || []
+                        };
+                        bench.push({
+                            name: oldActive.name,
+                            current_hp: oldActive.current_hp,
+                            max_hp: oldActive.max_hp,
+                            attached_energy: oldActive.attached_energy || []
+                        });
+                        CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: Switched active [${oldActive.name}] with [${newActive.name}] from bench!`);
+                    } else {
+                        CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: No benched Pokémon available to switch.`);
+                    }
+                    advanceWinningRouteStepIfType("PLAY_ITEM");
+                }
+                // 1E. Boss's Orders / Gust
+                else if (clean.includes('boss') || clean.includes('gust')) {
+                    const oppBench = CURRENT_MATCH_STATE.opponent.bench || [];
+                    if (oppBench.length > 0) {
+                        const oldOpp = CURRENT_MATCH_STATE.opponent.active_spot;
+                        const newOpp = oppBench.shift();
+                        CURRENT_MATCH_STATE.opponent.active_spot = {
+                            name: newOpp.name,
+                            current_hp: newOpp.current_hp,
+                            max_hp: newOpp.max_hp,
+                            attached_energy: newOpp.attached_energy || []
+                        };
+                        oppBench.push({
+                            name: oldOpp.name,
+                            current_hp: oldOpp.current_hp,
+                            max_hp: oldOpp.max_hp,
+                            attached_energy: oldOpp.attached_energy || []
+                        });
+                        CURRENT_MATCH_STATE.match_log.push(`🎯 Played [${cname}] from hand: Forced opponent to promote bench [${newOpp.name}] to Active!`);
+                    } else {
+                        CURRENT_MATCH_STATE.match_log.push(`🎯 Played [${cname}] from hand: Opponent has no benched Pokémon to switch.`);
+                    }
+                    advanceWinningRouteStepIfType("PLAY_SUPPORTER");
+                }
+                // Generic Trainer fallback
+                else {
+                    CURRENT_MATCH_STATE.match_log.push(`📜 Played Trainer card [${cname}] from hand.`);
+                    advanceWinningRouteStepIfType("PLAY_ITEM");
+                }
+
+                if (LAST_AI_REPORT) {
+                    renderStrategicAiReport(LAST_AI_REPORT);
+                }
+                updateMatchView(CURRENT_MATCH_STATE);
+                return;
+            }
+
+            // 2. Energy Card
+            if (isEnergy) {
+                if (CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                    alert("⚡ Energy Rule: You can only attach 1 energy from hand per turn!");
+                    return;
+                }
+                const pActive = CURRENT_MATCH_STATE.player.active_spot;
+                const limit = getPokemonMaxEnergyLimit(pActive.name);
+                const currentEnergy = (pActive.attached_energy || []).length;
+                if (currentEnergy >= limit) {
+                    alert(`⚠️ Energy Limit: [${pActive.name}] already has ${currentEnergy} energy attached (max saturation limit: ${limit}).`);
                     return;
                 }
                 hand.splice(idx, 1);
-                bench.push({ name: cname, current_hp: meta.hp || 70, max_hp: meta.hp || 70, attached_energy: [] });
-                CURRENT_MATCH_STATE.match_log.push(`🛡️ Placed Basic Pokémon [${cname}] onto Bench.`);
+                pActive.attached_energy.push(cname);
+                CURRENT_MATCH_STATE.energy_attached_this_turn = true;
+                CURRENT_MATCH_STATE.match_log.push(`⚡ Attached [${cname}] to active [${pActive.name}] (${pActive.attached_energy.length}/${limit}).`);
+                advanceWinningRouteStepIfType("ATTACH_ENERGY");
+                if (LAST_AI_REPORT) {
+                    renderStrategicAiReport(LAST_AI_REPORT);
+                }
+                updateMatchView(CURRENT_MATCH_STATE);
+                return;
             }
-            // 2. Evolution Pokemon -> Must evolve onto matching Pokemon
-            else if (stype.includes('pok') && (stage === 'Stage 1' || stage === 'Stage 2')) {
+
+            // 3. Evolution Pokemon -> Must evolve onto matching Pokemon
+            if (stage === 'Stage 1' || stage === 'Stage 2' || (meta.evolves_from && meta.evolves_from.length > 0)) {
                 const evoFrom = (meta.evolves_from || '').toLowerCase();
                 const pActive = CURRENT_MATCH_STATE.player.active_spot;
                 let evolved = false;
@@ -2044,19 +2302,31 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     alert(`⚠️ Cannot evolve: [${cname}] evolves from [${meta.evolves_from || 'Pre-evolution'}], which is not on your active or bench spots!`);
                     return;
                 }
-            }
-            // 3. Trainer / Energy Card
-            else if (stype.includes('energy') || cname.toLowerCase().includes('energy')) {
-                hand.splice(idx, 1);
-                CURRENT_MATCH_STATE.player.active_spot.attached_energy.push(cname);
-                CURRENT_MATCH_STATE.match_log.push(`⚡ Attached [${cname}] to active [${CURRENT_MATCH_STATE.player.active_spot.name}].`);
-            }
-            else {
-                hand.splice(idx, 1);
-                CURRENT_MATCH_STATE.match_log.push(`📜 Played Trainer card [${cname}].`);
+                advanceWinningRouteStepIfType("EVOLVE_POKEMON");
+                if (LAST_AI_REPORT) {
+                    renderStrategicAiReport(LAST_AI_REPORT);
+                }
+                updateMatchView(CURRENT_MATCH_STATE);
+                return;
             }
 
-            updateMatchView(CURRENT_MATCH_STATE);
+            // 4. Basic Pokemon -> Bench
+            if (isBasicPokemon(meta)) {
+                const bench = CURRENT_MATCH_STATE.player.bench || [];
+                if (bench.length >= 3) {
+                    alert("⚠️ Bench is full (max 3 Pokémon slots)!");
+                    return;
+                }
+                hand.splice(idx, 1);
+                bench.push({ name: cname, current_hp: meta.hp || 70, max_hp: meta.hp || 70, attached_energy: [] });
+                CURRENT_MATCH_STATE.match_log.push(`🛡️ Placed Basic Pokémon [${cname}] onto Bench.`);
+                advanceWinningRouteStepIfType("BENCH_POKEMON");
+                if (LAST_AI_REPORT) {
+                    renderStrategicAiReport(LAST_AI_REPORT);
+                }
+                updateMatchView(CURRENT_MATCH_STATE);
+                return;
+            }
         }
 
         function matchAttack(atkName, dmg) {
@@ -2153,12 +2423,17 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
             CURRENT_MATCH_STATE.is_player_turn = true;
             CURRENT_MATCH_STATE.card_drawn_this_turn = false;
+            CURRENT_MATCH_STATE.energy_attached_this_turn = false;
+            CURRENT_ROUTE_STEP_INDEX = 0;
             CURRENT_MATCH_STATE.turn_number++;
             CURRENT_MATCH_STATE.match_log.push(`--- Turn ${CURRENT_MATCH_STATE.turn_number}: Your Turn ---`);
             IS_AI_PROCESSING = false;
             updateMatchView(CURRENT_MATCH_STATE);
             runDynamicAiAnalysis(CURRENT_MATCH_STATE);
         }
+
+        let LAST_AI_REPORT = null;
+        let CURRENT_ROUTE_STEP_INDEX = 0;
 
         function runDynamicAiAnalysis(state) {
             if (!state || state.winner) return;
@@ -2175,10 +2450,327 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                 <div>2. Attach Energy to Bench Pokémon &bull; <span style="color:var(--neon-green); font-weight:800;">${Math.max(10, winPct - 8)}% Win Rate</span></div>
                 <div>3. Draw additional cards &bull; <span style="color:var(--neon-green); font-weight:800;">${Math.max(10, winPct - 14)}% Win Rate</span></div>
             `;
+
+            // Trigger POMDP MCTS Strategic Analysis in background
+            fetchStrategicAiAnalysis('FAST');
+        }
+
+        async function fetchStrategicAiAnalysis(mode = 'FAST') {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+            const btn = document.getElementById('btn-compute-winning-route');
+            if (btn) {
+                btn.innerHTML = '⏳ COMPUTING ROUTE...';
+                btn.disabled = true;
+            }
+
+            try {
+                const payload = {
+                    game_state: {
+                        turn_number: CURRENT_MATCH_STATE.turn_number || 1,
+                        is_player_turn: CURRENT_MATCH_STATE.is_player_turn,
+                        player: {
+                            active_spot: {
+                                name: CURRENT_MATCH_STATE.player.active_spot.name,
+                                current_hp: CURRENT_MATCH_STATE.player.active_spot.current_hp,
+                                max_hp: CURRENT_MATCH_STATE.player.active_spot.max_hp,
+                                attached_energy: CURRENT_MATCH_STATE.player.active_spot.attached_energy || []
+                            },
+                            active_pokemon: {
+                                name: CURRENT_MATCH_STATE.player.active_spot.name,
+                                current_hp: CURRENT_MATCH_STATE.player.active_spot.current_hp,
+                                max_hp: CURRENT_MATCH_STATE.player.active_spot.max_hp,
+                                attached_energy: CURRENT_MATCH_STATE.player.active_spot.attached_energy || []
+                            },
+                            bench: (CURRENT_MATCH_STATE.player.bench || []).map(b => ({
+                                name: b.name,
+                                current_hp: b.current_hp,
+                                max_hp: b.max_hp,
+                                attached_energy: b.attached_energy || []
+                            })),
+                            hand: CURRENT_MATCH_STATE.player.hand || [],
+                            deck_count: (CURRENT_MATCH_STATE.player.deck || []).length,
+                            prizes_remaining: Math.max(1, 6 - (CURRENT_MATCH_STATE.player.prizes_taken || 0)),
+                            prizes_taken: CURRENT_MATCH_STATE.player.prizes_taken || 0
+                        },
+                        opponent: {
+                            active_spot: {
+                                name: CURRENT_MATCH_STATE.opponent.active_spot.name,
+                                current_hp: CURRENT_MATCH_STATE.opponent.active_spot.current_hp,
+                                max_hp: CURRENT_MATCH_STATE.opponent.active_spot.max_hp,
+                                attached_energy: CURRENT_MATCH_STATE.opponent.active_spot.attached_energy || []
+                            },
+                            active_pokemon: {
+                                name: CURRENT_MATCH_STATE.opponent.active_spot.name,
+                                current_hp: CURRENT_MATCH_STATE.opponent.active_spot.current_hp,
+                                max_hp: CURRENT_MATCH_STATE.opponent.active_spot.max_hp,
+                                attached_energy: CURRENT_MATCH_STATE.opponent.active_spot.attached_energy || []
+                            },
+                            bench: (CURRENT_MATCH_STATE.opponent.bench || []).map(b => ({
+                                name: b.name,
+                                current_hp: b.current_hp,
+                                max_hp: b.max_hp,
+                                attached_energy: b.attached_energy || []
+                            })),
+                            hand_count: (CURRENT_MATCH_STATE.opponent.hand || []).length,
+                            deck_count: (CURRENT_MATCH_STATE.opponent.deck || []).length,
+                            prizes_remaining: Math.max(1, 6 - (CURRENT_MATCH_STATE.opponent.prizes_taken || 0)),
+                            prizes_taken: CURRENT_MATCH_STATE.opponent.prizes_taken || 0
+                        }
+                    },
+                    mode: mode
+                };
+
+                const res = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    LAST_AI_REPORT = data;
+                    CURRENT_ROUTE_STEP_INDEX = 0;
+                    renderStrategicAiReport(data);
+                }
+            } catch (err) {
+                console.warn("Notice: Online AI analysis fallback", err);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = '🧠 COMPUTE WINNING ROUTE';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        function renderStrategicAiReport(data) {
+            if (!data) return;
+
+            const wr = data.winning_route;
+            const steps = wr && wr.steps ? wr.steps : [];
+            let activeStep = null;
+
+            // Auto-advance past ATTACH_ENERGY if energy already attached this turn
+            while (CURRENT_ROUTE_STEP_INDEX < steps.length && 
+                   steps[CURRENT_ROUTE_STEP_INDEX].action_type === 'ATTACH_ENERGY' && 
+                   CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                CURRENT_ROUTE_STEP_INDEX++;
+            }
+
+            if (steps.length > 0 && CURRENT_ROUTE_STEP_INDEX < steps.length) {
+                activeStep = steps[CURRENT_ROUTE_STEP_INDEX];
+            }
+
+            // 1. Live Match Win Rate & Confidence Interval
+            if (data.mathematical_analysis && data.mathematical_analysis.win_probability_after_pct) {
+                document.getElementById('left-win-pct').textContent = data.mathematical_analysis.win_probability_after_pct;
+            }
+            const confElem = document.getElementById('left-confidence-interval');
+            if (confElem && data.confidence) {
+                confElem.textContent = `95% CI: ${data.confidence.confidence_interval_95} • ${data.operational_mode || 'MCTS'} (${data.confidence.simulations_conducted || 30} sims)`;
+            }
+
+            // 2. Best Move & Why (Dynamically reflects active step)
+            if (activeStep) {
+                document.getElementById('left-rec-action').textContent = `Step ${activeStep.step}: ${activeStep.action}`;
+                document.getElementById('left-rec-desc').textContent = activeStep.strategic_impact || data.why || 'Execute recommended sequence to maintain route victory.';
+            } else if (data.best_move) {
+                document.getElementById('left-rec-action').textContent = data.best_move;
+                if (data.why) {
+                    document.getElementById('left-rec-desc').textContent = data.why;
+                }
+            }
+
+            // 3. The Winning Route Roadmap with step states
+            if (wr) {
+                const turnsBadge = document.getElementById('left-route-turns');
+                if (turnsBadge) {
+                    turnsBadge.textContent = `${wr.estimated_turns_to_victory || 3} TURNS`;
+                }
+                const sumElem = document.getElementById('left-route-summary');
+                if (sumElem) {
+                    sumElem.textContent = wr.summary || `Winning Route to Victory (${wr.target_prizes_total || 6} Prizes)`;
+                }
+                const stepsElem = document.getElementById('left-route-steps');
+                if (stepsElem && wr.steps) {
+                    stepsElem.innerHTML = wr.steps.map((s, idx) => {
+                        if (idx < CURRENT_ROUTE_STEP_INDEX) {
+                            return `
+                                <div style="background:rgba(0,255,136,0.08); border-left:3px solid var(--neon-green); padding:4px 8px; border-radius:3px; opacity:0.8;">
+                                    <div style="font-weight:700; color:var(--neon-green);">Step ${s.step}: [COMPLETED ✅] <span style="text-decoration:line-through; color:var(--text-dim);">${s.action}</span></div>
+                                    <div style="color:var(--text-dim); font-size:0.65rem;">Phase: ${s.phase} &bull; Action executed</div>
+                                </div>
+                            `;
+                        } else if (idx === CURRENT_ROUTE_STEP_INDEX) {
+                            return `
+                                <div style="background:rgba(0,243,255,0.18); border-left:3px solid var(--neon-cyan); padding:5px 8px; border-radius:3px; box-shadow:0 0 10px rgba(0,243,255,0.25);">
+                                    <div style="font-weight:800; color:#fff;">Step ${s.step}: [CURRENT STEP ⚡] <span style="color:var(--neon-cyan); font-weight:800;">${s.action}</span></div>
+                                    <div style="color:var(--text-glow); font-size:0.65rem;">Phase: ${s.phase} &bull; Prizes: +${s.prizes_gained} (${s.remaining_needed} left)</div>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div style="background:rgba(255,255,255,0.03); border-left:3px solid var(--text-dim); padding:4px 8px; border-radius:3px; opacity:0.7;">
+                                    <div style="font-weight:600; color:var(--text-dim);">Step ${s.step}: [UPCOMING ⏳] <span style="color:#cbd5e1;">${s.action}</span></div>
+                                    <div style="color:var(--text-dim); font-size:0.65rem;">Phase: ${s.phase} &bull; Prizes: +${s.prizes_gained} (${s.remaining_needed} left)</div>
+                                </div>
+                            `;
+                        }
+                    }).join('');
+                }
+                const condElem = document.getElementById('left-route-condition');
+                if (condElem && wr.key_condition) {
+                    condElem.textContent = `💡 Key: ${wr.key_condition}`;
+                }
+            }
+
+            // 4. Top Ranked Plays with Deltas
+            const rankedListElem = document.getElementById('left-ranked-list');
+            if (rankedListElem) {
+                let html = `<div>1. ${data.best_move} &bull; <span style="color:var(--neon-green); font-weight:800;">${data.mathematical_analysis ? data.mathematical_analysis.win_probability_after_pct : '--'}</span></div>`;
+                if (data.alternative_moves && data.alternative_moves.length > 0) {
+                    data.alternative_moves.slice(0, 3).forEach(alt => {
+                        html += `<div>${alt.rank}. ${alt.action_name} &bull; <span style="color:#f87171; font-weight:700;">${alt.win_probability_pct} (${alt.delta_str})</span></div>`;
+                    });
+                }
+                rankedListElem.innerHTML = html;
+            }
+
+            // 5. Predicted Opponent Counter & Response
+            const oppDangElem = document.getElementById('left-opp-dangerous');
+            const oppCountElem = document.getElementById('left-opp-counter');
+            if (data.most_dangerous_response) {
+                if (oppDangElem) {
+                    oppDangElem.textContent = `${data.most_dangerous_response.description} (${data.most_dangerous_response.probability})`;
+                }
+                if (oppCountElem) {
+                    oppCountElem.textContent = `Counter-strategy: ${data.most_dangerous_response.best_counter_move}`;
+                }
+            }
+
+            // 6. Mathematical Formula & Expected Value
+            const mathFormElem = document.getElementById('left-math-formula');
+            const mathEvElem = document.getElementById('left-math-ev');
+            if (data.mathematical_calculations) {
+                if (mathFormElem) {
+                    mathFormElem.textContent = data.mathematical_calculations.formula || 'Damage = (Base + Bonus) * Weakness - Resist';
+                }
+                if (mathEvElem) {
+                    const ev = data.mathematical_calculations.expected_value_ev;
+                    const ko = data.mathematical_calculations.knockout_probability_pct;
+                    const risk = data.risk_assessment ? data.risk_assessment.risk_level : 'LOW';
+                    mathEvElem.textContent = `EV: ${ev >= 0 ? '+' : ''}${ev} • KO Chance: ${ko} • Risk: ${risk}`;
+                }
+            }
         }
 
         function executeAiRecommendation() {
-            if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) return;
+            if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING || CURRENT_MATCH_STATE.winner) return;
+
+            // Sequential Winning Route Step Execution: Strictly 1 step per click!
+            if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
+                const steps = LAST_AI_REPORT.winning_route.steps;
+
+                // Auto-advance if an energy attachment step is already satisfied
+                while (CURRENT_ROUTE_STEP_INDEX < steps.length && 
+                       steps[CURRENT_ROUTE_STEP_INDEX].action_type === 'ATTACH_ENERGY' && 
+                       CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                    CURRENT_ROUTE_STEP_INDEX++;
+                }
+
+                if (CURRENT_ROUTE_STEP_INDEX < steps.length) {
+                    const step = steps[CURRENT_ROUTE_STEP_INDEX];
+                    const actType = (step.action_type || '').toUpperCase();
+                    const pHand = CURRENT_MATCH_STATE.player.hand || [];
+
+                    // 1. PLAY_ITEM / PLAY_SUPPORTER (One step)
+                    if (actType === 'PLAY_ITEM' || actType === 'PLAY_SUPPORTER' || actType.startsWith('PLAY_')) {
+                        const targetCard = step.card_name;
+                        let cardToPlay = targetCard && pHand.includes(targetCard) ? targetCard : pHand.find(c => {
+                            const meta = getCardMeta(c);
+                            const stype = (meta.card_type || meta.supertype || '').toLowerCase();
+                            return stype.includes('trainer') || stype.includes('item') || stype.includes('supporter') ||
+                                   c.toLowerCase().includes('potion') || c.toLowerCase().includes('research') || c.toLowerCase().includes('ball');
+                        });
+
+                        const prevIdx = CURRENT_ROUTE_STEP_INDEX;
+                        if (cardToPlay) {
+                            matchPlayCard(cardToPlay);
+                        } else {
+                            CURRENT_MATCH_STATE.match_log.push(`⚡ Executed hand power: ${step.action}.`);
+                        }
+                        if (CURRENT_ROUTE_STEP_INDEX === prevIdx) {
+                            CURRENT_ROUTE_STEP_INDEX++;
+                        }
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        renderStrategicAiReport(LAST_AI_REPORT);
+                        return; // Return immediately: only 1 step executed!
+                    }
+
+                    // 2. EVOLVE_POKEMON (One step)
+                    if (actType === 'EVOLVE_POKEMON') {
+                        const targetCard = step.card_name;
+                        let cardToPlay = targetCard && pHand.includes(targetCard) ? targetCard : pHand.find(c => {
+                            const meta = getCardMeta(c);
+                            return (meta.stage === 'Stage 1' || meta.stage === 'Stage 2');
+                        });
+
+                        const prevIdx = CURRENT_ROUTE_STEP_INDEX;
+                        if (cardToPlay) {
+                            matchPlayCard(cardToPlay);
+                        } else {
+                            CURRENT_MATCH_STATE.match_log.push(`⚡ Executed hand power: ${step.action}.`);
+                        }
+                        if (CURRENT_ROUTE_STEP_INDEX === prevIdx) {
+                            CURRENT_ROUTE_STEP_INDEX++;
+                        }
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        renderStrategicAiReport(LAST_AI_REPORT);
+                        return; // Return immediately: only 1 step executed!
+                    }
+
+                    // 3. BENCH_POKEMON (One step)
+                    if (actType === 'BENCH_POKEMON' || actType === 'PLAY_BASIC') {
+                        const targetCard = step.card_name;
+                        let cardToPlay = targetCard && pHand.includes(targetCard) ? targetCard : pHand.find(c => isBasicPokemon(getCardMeta(c)));
+
+                        const prevIdx = CURRENT_ROUTE_STEP_INDEX;
+                        if (cardToPlay) {
+                            matchPlayCard(cardToPlay);
+                        } else {
+                            CURRENT_MATCH_STATE.match_log.push(`⚡ Executed hand power: ${step.action}.`);
+                        }
+                        if (CURRENT_ROUTE_STEP_INDEX === prevIdx) {
+                            CURRENT_ROUTE_STEP_INDEX++;
+                        }
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        renderStrategicAiReport(LAST_AI_REPORT);
+                        return; // Return immediately: only 1 step executed!
+                    }
+
+                    // 4. ATTACH_ENERGY (One step)
+                    if (actType === 'ATTACH_ENERGY') {
+                        const prevIdx = CURRENT_ROUTE_STEP_INDEX;
+                        promptAddEnergyDirect('player');
+                        if (CURRENT_ROUTE_STEP_INDEX === prevIdx) {
+                            CURRENT_ROUTE_STEP_INDEX++;
+                        }
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        renderStrategicAiReport(LAST_AI_REPORT);
+                        return; // Return immediately: only 1 step executed!
+                    }
+
+                    // 5. ATTACK (Turn Finisher)
+                    if (actType === 'ATTACK') {
+                        CURRENT_ROUTE_STEP_INDEX++;
+                        const atkName = step.attack_name || "Strike";
+                        const dmg = step.damage || 40;
+                        matchAttack(atkName, dmg);
+                        return; // Turn concludes
+                    }
+                }
+            }
+
+            // Fallback: Primary attack
             const meta = getCardMeta(CURRENT_MATCH_STATE.player.active_spot.name);
             const atk = (meta.attacks && meta.attacks[0]) ? meta.attacks[0] : { name: "Strike", base_damage: 40 };
             matchAttack(atk.name, atk.base_damage || 40);
