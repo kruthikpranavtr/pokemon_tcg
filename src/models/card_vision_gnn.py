@@ -135,7 +135,9 @@ class CardVisionGNN:
         nodes = []
         node_indices = {}
 
-        def add_node(card_dict: Dict[str, Any], role: str) -> int:
+        def add_node(card_dict: Optional[Dict[str, Any]], role: str) -> int:
+            if not card_dict or not isinstance(card_dict, dict):
+                card_dict = {"name": "Empty"}
             cid = card_dict.get("card_id") or card_dict.get("name") or f"node_{len(nodes)}"
             img_emb = images.get(cid)
             feat = self.encode_card_node(card_dict, img_emb, role)
@@ -144,16 +146,16 @@ class CardVisionGNN:
             node_indices[cid] = idx
             return idx
 
-        player = game_state.get("player", {})
-        opponent = game_state.get("opponent", {})
+        player = game_state.get("player") or {}
+        opponent = game_state.get("opponent") or {}
 
         # 1. Player Active & Attached Energy
-        p_active = player.get("active_spot", {})
-        p_active_idx = add_node(p_active, "ACTIVE") if p_active else None
+        p_active = player.get("active_spot")
+        p_active_idx = add_node(p_active, "ACTIVE") if (p_active and isinstance(p_active, dict) and p_active.get("name")) else None
 
         edges = []  # (src, dst, rel_type)
 
-        if p_active:
+        if p_active and isinstance(p_active, dict):
             for e_idx, e in enumerate(p_active.get("attached_energy", [])):
                 e_card = {"name": f"Energy_{e_idx}", "supertype": "Energy", "subtypes": ["Basic Energy"]}
                 e_node_idx = add_node(e_card, "ACTIVE")
@@ -162,6 +164,8 @@ class CardVisionGNN:
         # 2. Player Bench
         p_bench_indices = []
         for b in player.get("bench", []):
+            if not b or not isinstance(b, dict):
+                continue
             b_idx = add_node(b, "BENCH")
             p_bench_indices.append(b_idx)
             if p_active_idx is not None:
@@ -173,20 +177,24 @@ class CardVisionGNN:
                 edges.append((e_node_idx, b_idx, 0))
 
         # 3. Opponent Active & Bench
-        opp_active = opponent.get("active_spot", {})
-        opp_active_idx = add_node(opp_active, "OPP_ACTIVE") if opp_active else None
+        opp_active = opponent.get("active_spot")
+        opp_active_idx = add_node(opp_active, "OPP_ACTIVE") if (opp_active and isinstance(opp_active, dict) and opp_active.get("name")) else None
         if p_active_idx is not None and opp_active_idx is not None:
             edges.append((p_active_idx, opp_active_idx, 3))  # ATTACK_TARGET
             edges.append((opp_active_idx, p_active_idx, 3))
 
         for b in opponent.get("bench", []):
+            if not b or not isinstance(b, dict):
+                continue
             opp_b_idx = add_node(b, "OPP_BENCH")
             if opp_active_idx is not None:
                 edges.append((opp_b_idx, opp_active_idx, 2))
 
         # 4. Player Hand Cards
         for h in player.get("hand", []):
-            h_idx = add_node(h, "HAND")
+            if not h:
+                continue
+            h_idx = add_node(h if isinstance(h, dict) else {"name": str(h)}, "HAND")
             if p_active_idx is not None:
                 edges.append((h_idx, p_active_idx, 1))  # EVOLVES_FROM / PLAY_TARGET
 

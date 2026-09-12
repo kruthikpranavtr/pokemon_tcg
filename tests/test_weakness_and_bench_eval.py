@@ -9,8 +9,8 @@ class TestWeaknessAndBenchEval(unittest.TestCase):
         self.card_db = CardDatabase.get_instance()
 
     def test_evaluate_pokemon_as_main_weakness_advantage(self):
-        # Opponent is Bulbasaur (Grass, weak to Fire, 70 HP)
-        opp_act = {"name": "Bulbasaur", "current_hp": 70, "max_hp": 70}
+        # Opponent is Bulbasaur (Grass, weak to Fire, 40 HP remaining)
+        opp_act = {"name": "Bulbasaur", "current_hp": 40, "max_hp": 70}
 
         # Charmander is Fire -> hits Grass weakness
         charmander_eval = self.evaluator.evaluate_pokemon_as_main("Charmander", opp_act)

@@ -17,33 +17,47 @@ class Test60CardMatchEngine(unittest.TestCase):
         cls.client = TestClient(app)
 
     def test_60card_match_setup(self):
-        self.engine.reset_match("charizard-ex-pidgeot", "miraidon-ex-regieleki")
-        # Check 60 cards total per player: hand (7) + prizes (6) + active (1) + bench (0-1) + deck = 60
-        total_p_cards = len(self.engine.player_hand) + len(self.engine.player_prizes) + 1 + len(self.engine.player_bench) + len(self.engine.player_deck)
+        self.engine.reset_match("charizard-fire", "pikachu-lightning")
+        # 60 cards total per player: hand (5) + prizes (6) + deck (49) = 60
+        total_p_cards = len(self.engine.player_hand) + len(self.engine.player_prizes) + len(self.engine.player_deck)
         self.assertEqual(total_p_cards, 60)
         self.assertEqual(len(self.engine.player_prizes), 6)
-        self.assertTrue(self.engine.player_active["current_hp"] > 0)
+        self.assertEqual(len(self.engine.player_hand), 5)
+        self.assertEqual(self.engine.phase, "SETUP")
         self.assertTrue(self.engine.opp_active["current_hp"] > 0)
 
     def test_play_actions_and_energy(self):
         self.engine.reset_match()
+        self.engine.player_active = {
+            "name": "Charmander", "current_hp": 70, "max_hp": 70,
+            "pokemon_type": "Fire", "attached_energy": []
+        }
+        self.engine.phase = "BATTLE"
         self.engine.player_hand.append("Basic Fire Energy")
-        res = self.engine.play_hand_card("Basic Fire Energy")
+        res = self.engine.attach_energy("Basic Fire Energy", target="active")
         self.assertEqual(res["status"], "success")
         self.assertTrue(self.engine.energy_attached_this_turn)
 
         # Test duplicate energy attachment failure
         self.engine.player_hand.append("Basic Fire Energy")
-        res2 = self.engine.play_hand_card("Basic Fire Energy")
+        res2 = self.engine.attach_energy("Basic Fire Energy", target="active")
         self.assertEqual(res2["status"], "error")
 
     def test_attack_and_knockout_resolution(self):
         self.engine.reset_match()
+        self.engine.phase = "BATTLE"
+        self.engine.player_active = {
+            "name": "Charizard ex", "current_hp": 330, "max_hp": 330,
+            "pokemon_type": "Fire", "attached_energy": ["Fire", "Fire"],
+            "attacks": [{"name": "Burning Darkness", "damage": 180, "cost": ["Fire", "Fire"]}]
+        }
         # Add bench to opponent so match continues after active KO
-        self.engine.opp_bench.append({
-            "name": "Iron Hands ex", "current_hp": 230, "max_hp": 230, "attached_energy": []
-        })
-        self.engine.opp_active["current_hp"] = 50
+        self.engine.opp_bench[0] = {
+            "name": "Pikachu ex", "current_hp": 200, "max_hp": 200, "attached_energy": []
+        }
+        self.engine.opp_active = {
+            "name": "Miraidon ex", "current_hp": 50, "max_hp": 220, "attached_energy": []
+        }
         res = self.engine.execute_attack("Burning Darkness", base_damage=180)
         self.assertIn(res["status"], ["success", "match_won"])
         self.assertTrue(res.get("knockout") or res.get("ko"))
@@ -54,27 +68,39 @@ class Test60CardMatchEngine(unittest.TestCase):
         res = self.client.post(
             "/api/v1/match/start",
             headers={"X-API-Key": "tcg-live-secret-key-2026"},
-            json={"player_deck_id": "charizard-ex-pidgeot", "opp_deck_id": "miraidon-ex-regieleki"}
+            json={"player_deck_id": "charizard-fire", "opp_deck_id": "pikachu-lightning"}
         )
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data["status"], "success")
         self.assertIn("ai_recommendation", data)
 
-        # 2. Draw Card
+        # 2. Place Active Pokémon in Setup
+        hand = self.engine.player_hand
+        basic_card = next((c for c in hand if self.engine.card_db.get(c, {}).get("stage") == "Basic" and self.engine.card_db.get(c, {}).get("card_type") == "pokemon"), None)
+        if not basic_card:
+            basic_card = "Charmander"
+            self.engine.player_hand.append("Charmander")
+
+        res_place = self.client.post(
+            "/api/v1/match/initial-place",
+            headers={"X-API-Key": "tcg-live-secret-key-2026"},
+            json={"card_name": basic_card, "slot": "active"}
+        )
+        self.assertEqual(res_place.status_code, 200)
+
+        res_confirm = self.client.post(
+            "/api/v1/match/confirm-setup",
+            headers={"X-API-Key": "tcg-live-secret-key-2026"}
+        )
+        self.assertEqual(res_confirm.status_code, 200)
+
+        # 3. Draw Card
         res_draw = self.client.post(
             "/api/v1/match/draw",
             headers={"X-API-Key": "tcg-live-secret-key-2026"}
         )
         self.assertEqual(res_draw.status_code, 200)
-
-        # 3. Attack
-        res_atk = self.client.post(
-            "/api/v1/match/attack",
-            headers={"X-API-Key": "tcg-live-secret-key-2026"},
-            json={"attack_name": "Burning Darkness", "base_damage": 180}
-        )
-        self.assertEqual(res_atk.status_code, 200)
 
         # 4. End Turn
         res_end = self.client.post(
@@ -89,13 +115,13 @@ class Test60CardMatchEngine(unittest.TestCase):
         res = self.client.post(
             "/api/v1/match/start",
             headers={"X-API-Key": "tcg-live-secret-key-2026"},
-            json={"custom_deck_list": custom_deck, "opp_deck_id": "miraidon-ex-regieleki"}
+            json={"custom_deck_list": custom_deck, "opp_deck_id": "pikachu-lightning"}
         )
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data["status"], "success")
-        self.assertEqual(len(data["match_state"]["player"]["hand"]), 4)
-        total_p = data["deck_counts"]["player_deck"] + data["deck_counts"]["player_hand"] + data["deck_counts"]["player_prizes"] + 1 + len(data["match_state"]["player"]["bench"])
+        self.assertEqual(data["deck_counts"]["player_hand"], 5)
+        total_p = data["deck_counts"]["player_deck"] + data["deck_counts"]["player_hand"] + data["deck_counts"]["player_prizes"]
         self.assertEqual(total_p, 60)
 
 

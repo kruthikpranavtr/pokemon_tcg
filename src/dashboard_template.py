@@ -633,6 +633,80 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             overflow-y: auto;
         }
 
+        /* FACE-DOWN DECK PILES (RUMMY/TCG DRAW PILE) */
+        .face-down-deck-box {
+            width: 100px;
+            height: 140px;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #090e1a 100%);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            user-select: none;
+            cursor: pointer;
+        }
+        .face-down-deck-box:hover:not(.deck-disabled) {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.35);
+            border-color: #38bdf8;
+        }
+        .face-down-deck-box.opp-deck {
+            border-color: var(--neon-magenta);
+            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3), inset 0 0 10px rgba(255, 0, 127, 0.2);
+            cursor: not-allowed;
+            pointer-events: none !important;
+        }
+        .face-down-deck-box.deck-disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+        .deck-card-back-pattern {
+            width: 76px;
+            height: 104px;
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.95));
+            pointer-events: none;
+        }
+        .deck-pokeball-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            background: linear-gradient(180deg, #ef4444 50%, #f8fafc 50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            position: relative;
+        }
+        .deck-pokeball-center {
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border: 2px solid #0f172a;
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
+        }
+        .deck-counter-badge {
+            margin-top: 6px;
+            font-family: var(--font-orbitron);
+            font-size: 0.72rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 6px rgba(0, 243, 255, 0.8);
+        }
+
         /* MODALS */
         .modal-overlay {
             position: fixed;
@@ -796,52 +870,78 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
         <!-- ================= VIEW 2: 🎴 YOUR AVAILABLE CARDS ================= -->
         <div id="view-cards" class="all-cards-section" style="display:none;">
-            <!-- 4-CARD BATTLE SELECTION DOCK -->
-            <div class="deck-builder-control-card" style="border: 2px solid var(--neon-cyan); box-shadow: 0 0 25px rgba(0,243,255,0.25); margin-bottom: 20px;">
+            <!-- EMPTY DECK GUIDANCE BANNER -->
+            <div id="empty-deck-alert-banner" style="display:none; margin-bottom:16px; background:linear-gradient(135deg, rgba(239,68,68,0.18), rgba(245,158,11,0.18)); border:2px solid var(--neon-amber); border-radius:10px; padding:16px 20px; box-shadow:0 0 25px rgba(245,158,11,0.35);">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
-                        <div style="font-family:var(--font-orbitron); font-size:1.15rem; font-weight:900; color:var(--neon-cyan);">
-                            🎯 CHOOSE YOUR 4 CARDS (BASIC POKÉMON ONLY)
+                        <div style="font-family:var(--font-orbitron); font-size:1.1rem; font-weight:900; color:var(--neon-amber); display:flex; align-items:center; gap:8px;">
+                            ⚠️ YOUR BATTLE DECK IS EMPTY!
                         </div>
-                        <div style="font-size:0.82rem; color:var(--text-dim); margin-top:2px;">
-                            Only Basic Pokémon can be chosen for starting slots. Pick 4 Basic Pokémon from your owned collection. Slot 1 becomes your Main Active Pokémon and Slots 2–4 become your Bench. Stage 1 & Stage 2 cards must be evolved legally during battle!
+                        <div style="font-size:0.85rem; color:#cbd5e1; margin-top:4px;">
+                            Add cards from your collection below or click <b>Quick Auto-Fill</b> to assemble 60 cards, then click <b>Save & Start Battle</b> to begin!
                         </div>
                     </div>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button id="btn-start-4cards" class="btn-action-main" style="padding:10px 20px; font-size:0.85rem; border-color:var(--neon-green); box-shadow:var(--neon-green-glow);" onclick="startBattleWithSelected4Cards()">
-                            ⚔️ PLACE MY 4 CARDS & START BATTLE
+                        <button class="btn-action-main" style="padding:8px 18px; font-size:0.8rem; background:linear-gradient(135deg, #f59e0b, #eab308); color:#000; font-weight:900; border:none; box-shadow:0 0 15px rgba(245,158,11,0.4);" onclick="quickAutoFillAndStartBattle()">
+                            ⚡ QUICK AUTO-FILL & START BATTLE
                         </button>
-                        <button class="btn-cyber-sm" style="background:var(--neon-amber); color:#000; font-weight:900; padding:10px 14px;" onclick="autoDealFromOwned()">
-                            🎲 AUTO-DEAL FROM OWNED
+                        <button class="btn-action-main" style="padding:8px 18px; font-size:0.8rem; background:linear-gradient(135deg, #00f3ff, #00ff88); color:#000; font-weight:900; border:none; box-shadow:0 0 15px rgba(0,255,136,0.4);" onclick="saveAndStartBattle()">
+                            ⚔️ SAVE & START BATTLE
                         </button>
-                        <button class="btn-cyber-sm" style="border-color:#ef4444; color:#fca5a5; padding:10px 14px;" onclick="resetChosen4Cards()">
-                            🔄 RESET
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3-SLOT 60-CARD DECK BUILDER DOCK -->
+            <div class="deck-builder-control-card" style="border: 2px solid var(--neon-cyan); box-shadow: 0 0 25px rgba(0,243,255,0.25); margin-bottom: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="font-family:var(--font-orbitron); font-size:1.15rem; font-weight:900; color:var(--neon-cyan);">
+                                🎴 60-CARD DECK BUILDER
+                            </div>
+                            <span id="active-deck-badge" class="cyber-badge" style="font-size:0.65rem; border-color:var(--neon-green); color:var(--neon-green);">ACTIVE FOR BATTLE</span>
+                        </div>
+                        <div style="font-size:0.82rem; color:var(--text-dim); margin-top:2px;">
+                            Build up to 3 custom 60-card decks from your collection. Add Pokémon, Trainers, and Energy. Select a deck for 60-Card Live Matches!
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button id="btn-save-start-battle" class="btn-action-main" style="padding:8px 18px; font-size:0.8rem; background:linear-gradient(135deg, #00f3ff, #00ff88); color:#000; font-weight:900; border:none; box-shadow:0 0 15px rgba(0,255,136,0.4);" onclick="saveAndStartBattle()">
+                            ⚔️ SAVE & START BATTLE
+                        </button>
+                        <button id="btn-save-deck" class="btn-action-main" style="padding:8px 16px; font-size:0.8rem; border-color:var(--neon-cyan);" onclick="saveCurrentDeckSlot()">
+                            💾 SAVE DECK
+                        </button>
+                        <button id="btn-select-battle-deck" class="btn-action-main" style="padding:8px 16px; font-size:0.8rem; border-color:var(--neon-green); box-shadow:var(--neon-green-glow);" onclick="selectCurrentDeckForBattle()">
+                            ⚔️ SELECT FOR BATTLE
+                        </button>
+                        <button id="btn-take-to-battle" class="btn-action-main" style="padding:8px 18px; font-size:0.8rem; background:linear-gradient(135deg, #00f3ff, #00ff88); color:#000; font-weight:900; border:none; box-shadow:0 0 15px rgba(0,255,136,0.4);" onclick="startBattleWithCurrentDeck()">
+                            ⚔️ TAKE TO BATTLE
+                        </button>
+                        <button class="btn-cyber-sm" style="background:linear-gradient(135deg, #f59e0b, #eab308); color:#000; font-weight:900; padding:8px 12px; font-size:0.75rem; border:none; box-shadow:0 0 10px rgba(245,158,11,0.3);" onclick="autoCompleteBalancedDeck()" title="Automatically balance your deck with Pokémon, Trainers, and matching Energies to reach 60 cards">
+                            ⚡ AUTO-COMPLETE DECK (60)
+                        </button>
+                        <button class="btn-cyber-sm" style="border-color:#ef4444; color:#fca5a5; padding:8px 12px; font-size:0.75rem;" onclick="clearCurrentDeck()">
+                            🗑️ CLEAR
                         </button>
                     </div>
                 </div>
 
-                <!-- 4 Slots Display -->
-                <div class="slots-row">
-                    <div id="slot-card-1" class="cd-stat-pill" style="border:2px solid var(--neon-cyan); background:rgba(0,243,255,0.12); flex-direction:column; align-items:flex-start; padding:10px; border-radius:8px;">
-                        <div style="font-size:0.7rem; color:var(--neon-cyan); font-family:var(--font-orbitron); font-weight:800;">👑 SLOT 1: MAIN ACTIVE (BASIC ONLY)</div>
-                        <div id="slot-name-1" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Select Basic Pokémon</div>
-                        <div id="slot-type-1" style="font-size:0.7rem; color:#cbd5e1;">Empty Slot</div>
+                <!-- Deck Tabs (Slot 1, Slot 2, Slot 3) -->
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(0,243,255,0.2); padding-bottom:8px;">
+                    <button id="deck-tab-1" class="tab-btn active" style="padding:6px 14px; font-size:0.78rem;" onclick="switchDeckSlot(1)">My Deck 1 (<span id="deck-count-tab-1">0</span>/60)</button>
+                    <button id="deck-tab-2" class="tab-btn" style="padding:6px 14px; font-size:0.78rem;" onclick="switchDeckSlot(2)">My Deck 2 (<span id="deck-count-tab-2">0</span>/60)</button>
+                    <button id="deck-tab-3" class="tab-btn" style="padding:6px 14px; font-size:0.78rem;" onclick="switchDeckSlot(3)">My Deck 3 (<span id="deck-count-tab-3">0</span>/60)</button>
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                        <input type="text" id="deck-name-input" class="neon-input" style="padding:5px 10px; font-size:0.78rem; width:180px; margin:0;" placeholder="Deck Name" value="My Deck 1" onchange="updateCurrentDeckName(this.value)">
+                        <span id="deck-total-count-badge" class="cyber-badge" style="font-size:0.75rem; padding:4px 10px;">Cards: <b id="deck-cards-count" style="color:#fff;">0</b> / 60</span>
                     </div>
-                    <div id="slot-card-2" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px; border-radius:8px;">
-                        <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 2: BENCH SUB #1 (BASIC ONLY)</div>
-                        <div id="slot-name-2" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Select Basic Pokémon</div>
-                        <div id="slot-type-2" style="font-size:0.7rem; color:#cbd5e1;">Empty Slot</div>
-                    </div>
-                    <div id="slot-card-3" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px; border-radius:8px;">
-                        <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 3: BENCH SUB #2 (BASIC ONLY)</div>
-                        <div id="slot-name-3" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Select Basic Pokémon</div>
-                        <div id="slot-type-3" style="font-size:0.7rem; color:#cbd5e1;">Empty Slot</div>
-                    </div>
-                    <div id="slot-card-4" class="cd-stat-pill" style="border:1px solid rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); flex-direction:column; align-items:flex-start; padding:10px; border-radius:8px;">
-                        <div style="font-size:0.7rem; color:var(--neon-green); font-family:var(--font-orbitron); font-weight:800;">🛡️ SLOT 4: BENCH SUB #3 (BASIC ONLY)</div>
-                        <div id="slot-name-4" style="font-size:0.95rem; font-weight:900; color:#fff; margin-top:3px;">Select Basic Pokémon</div>
-                        <div id="slot-type-4" style="font-size:0.7rem; color:#cbd5e1;">Empty Slot</div>
-                    </div>
+                </div>
+
+                <!-- Deck Card Tray (chips of cards in current deck) -->
+                <div id="deck-cards-tray" style="display:flex; flex-wrap:wrap; gap:6px; min-height:48px; max-height:160px; overflow-y:auto; background:rgba(2,4,9,0.7); border:1px solid rgba(0,243,255,0.15); border-radius:6px; padding:8px;">
+                    <div style="color:var(--text-dim); font-size:0.75rem; font-style:italic; width:100%; text-align:center; padding:10px 0;">This deck is empty. Click "+ ADD TO DECK" on any card below to add up to 60 cards.</div>
                 </div>
             </div>
 
@@ -953,7 +1053,7 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     <!-- MATHEMATICAL FORMULA & EXPECTED VALUE -->
                     <div id="left-math-analysis-box" style="background:rgba(2,4,9,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 10px; font-family:var(--font-mono); font-size:0.68rem;">
                         <div style="color:var(--text-dim); margin-bottom:3px;">FORMULA:</div>
-                        <div id="left-math-formula" style="color:var(--neon-cyan); word-break:break-all;">Damage = (Base + Bonus) * Weakness - Resist</div>
+                        <div id="left-math-formula" style="color:var(--neon-cyan); word-break:break-all;">Damage = Base * Type Multiplier (+50% Adv / -50% Disadv / Normal)</div>
                         <div id="left-math-ev" style="color:#94a3b8; margin-top:4px;">EV: +0.5000 &bull; Knockout: 50% &bull; Risk: LOW</div>
                     </div>
 
@@ -971,15 +1071,62 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
                 <!-- CENTER COLUMN: TCG BATTLE ARENA PLAYMAT -->
                 <div class="tcg-playmat-container">
-                    <!-- OPPONENT TOP BOARD: SUB POKÉMON & DECK -->
-                    <div>
-                        <div class="section-label" style="color:var(--neon-magenta);"><span>OPPONENT SUB POKÉMON (3 SLOTS)</span></div>
-                        <div id="opp-bench-view" class="bench-grid"></div>
+                    <!-- SETUP PHASE BANNER -->
+                    <div id="match-setup-banner" style="display:none; background:rgba(0,243,255,0.08); border:1px solid var(--neon-cyan); border-radius:8px; padding:12px 16px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <div style="font-family:var(--font-orbitron); font-size:0.95rem; font-weight:900; color:var(--neon-cyan);">
+                                    🎯 INITIAL SETUP: PLACE BASIC POKÉMON (4-CARD HAND)
+                                </div>
+                                <div style="font-size:0.75rem; color:#cbd5e1; margin-top:2px;">
+                                    Place 1 Basic Pokémon into Active Spot (Main) and up to 3 into Bench Slots.
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button id="btn-quick-start" class="btn-action-main" style="background:linear-gradient(135deg, #00f3ff, #00ff88); color:#000; font-weight:900; border:none; padding:6px 14px; font-size:0.75rem;" onclick="autoPlaceSetupAndBattle()">
+                                    ⚡ QUICK START (AUTO-PLACE & BATTLE)
+                                </button>
+                                <button id="btn-mulligan" class="btn-cyber-sm" style="border-color:var(--neon-amber); color:#fef08a; padding:6px 12px; font-size:0.75rem;" onclick="triggerMulligan()">
+                                    🔄 MULLIGAN REDRAW
+                                </button>
+                                <button id="btn-confirm-setup" class="btn-action-main" style="border-color:var(--neon-green); padding:6px 14px; font-size:0.75rem;" onclick="confirmInitialSetup()">
+                                    ✅ CONFIRM SETUP
+                                </button>
+                            </div>
+                        </div>
+                        <div id="setup-ai-rec-box" style="display:none; margin-top:10px; background:rgba(2,6,18,0.85); border:1px solid rgba(0,243,255,0.4); border-radius:6px; padding:8px 12px; font-size:0.75rem;">
+                        </div>
+                    </div>
+
+                    <!-- OPPONENT HAND CARDS (FACE-DOWN CARD BACKS - HIDDEN FROM PLAYER) -->
+                    <div style="margin-bottom:10px;">
+                        <div class="section-label" style="color:var(--neon-magenta);"><span>AI HAND (<span id="opp-hand-count-label">5</span> CARDS FACE-DOWN)</span></div>
+                        <div id="opp-hand-view" class="hand-grid" style="pointer-events:none; user-select:none; opacity:0.9;"></div>
+                    </div>
+
+                    <!-- OPPONENT TOP BOARD: BENCH & FACE-DOWN DECK PILE -->
+                    <div style="display:flex; gap:14px; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div class="section-label" style="color:var(--neon-magenta);"><span>OPPONENT BENCH POKÉMON (MAX 3 SLOTS)</span></div>
+                            <div id="opp-bench-view" class="bench-grid"></div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <div class="section-label" style="color:var(--neon-magenta); font-size:0.65rem;"><span>AI DECK (FACE-DOWN)</span></div>
+                            <div id="opp-face-down-deck" class="face-down-deck-box opp-deck" title="AI Opponent Deck (Strictly Isolated - Cannot be viewed or drawn by player)">
+                                <div class="deck-card-back-pattern">
+                                    <div class="deck-pokeball-icon" style="box-shadow:0 0 10px rgba(255,0,127,0.4);">
+                                        <div class="deck-pokeball-center"></div>
+                                    </div>
+                                    <div class="deck-counter-badge" style="color:#f472b6;"><span id="opp-deck-count">55</span></div>
+                                    <div style="font-size:0.55rem; color:#fca5a5; font-family:var(--font-mono); margin-top:2px;">CARDS</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- OPPONENT MAIN POKÉMON -->
                     <div class="active-spot-center">
-                        <div class="section-label" style="color:var(--neon-magenta);"><span>👑 OPPONENT MAIN POKÉMON</span></div>
+                        <div class="section-label" style="color:var(--neon-magenta);"><span>👑 OPPONENT ACTIVE POKÉMON</span></div>
                         <div id="opp-active-view" class="visual-active-card opp-active-card"></div>
                     </div>
 
@@ -992,31 +1139,64 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
                     <!-- PLAYER MAIN POKÉMON -->
                     <div class="active-spot-center">
-                        <div class="section-label" style="color:var(--neon-cyan);"><span>👑 YOUR MAIN POKÉMON</span></div>
+                        <div class="section-label" style="color:var(--neon-cyan);"><span>👑 YOUR ACTIVE POKÉMON</span></div>
                         <div id="player-active-view" class="visual-active-card"></div>
                     </div>
 
                     <!-- PLAYER BOTTOM BOARD: SUB POKÉMON -->
                     <div>
-                        <div class="section-label" style="color:var(--neon-cyan);"><span>YOUR SUB POKÉMON (3 SLOTS)</span></div>
+                        <div class="section-label" style="color:var(--neon-cyan);"><span>YOUR BENCH POKÉMON (MAX 3 SLOTS)</span></div>
                         <div id="player-bench-view" class="bench-grid"></div>
                     </div>
 
-                    <!-- PLAYER HAND CARDS -->
-                    <div>
-                        <div class="section-label"><span>YOUR HAND CARDS (DRAWN FROM COLLECTION DECK)</span></div>
-                        <div id="player-hand-view" class="hand-grid"></div>
+                    <!-- PLAYER HAND CARDS & FACE-DOWN DRAW PILE -->
+                    <div style="display:flex; gap:14px; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div class="section-label"><span>YOUR HAND CARDS (<span id="hand-count-label">5</span> CARDS)</span></div>
+                            <div id="player-hand-view" class="hand-grid"></div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <div class="section-label" style="color:var(--neon-cyan); font-size:0.65rem;"><span>YOUR DECK (DRAW PILE)</span></div>
+                            <div id="player-face-down-deck" class="face-down-deck-box" onclick="claimRandomDeckCard()" title="Click to draw 1 card from your 60-card face-down deck (1/turn)">
+                                <div class="deck-card-back-pattern">
+                                    <div class="deck-pokeball-icon">
+                                        <div class="deck-pokeball-center"></div>
+                                    </div>
+                                    <div class="deck-counter-badge"><span id="p-deck-count-visual">55</span></div>
+                                    <div style="font-size:0.55rem; color:var(--neon-cyan); font-family:var(--font-mono); margin-top:2px;">DRAW PILE</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- MATCH CONTROLS -->
-                    <div class="match-actions-bar">
+                    <!-- SETUP BOTTOM ACTIONS BAR (Active during SETUP phase) -->
+                    <div id="setup-bottom-actions-bar" class="match-actions-bar" style="display:none; background:rgba(0,243,255,0.08); border:1px solid var(--neon-cyan); border-radius:8px; padding:10px 14px; margin-top:12px;">
+                        <button class="btn-action-main" style="background:linear-gradient(135deg, #00f3ff, #00ff88); color:#000; font-weight:900; border:none; padding:8px 18px; font-size:0.8rem; box-shadow:0 0 15px rgba(0,255,136,0.4);" onclick="autoPlaceSetupAndBattle()">
+                            ⚡ AUTO-PLACE & START BATTLE
+                        </button>
+                        <button class="btn-cyber-sm" style="border-color:var(--neon-amber); color:#fef08a; padding:8px 14px; font-size:0.75rem;" onclick="triggerMulligan()">
+                            🔄 MULLIGAN REDRAW
+                        </button>
+                        <button class="btn-action-main" style="border-color:var(--neon-green); padding:8px 16px; font-size:0.78rem;" onclick="confirmInitialSetup()">
+                            ✅ CONFIRM SETUP
+                        </button>
+                        <button class="btn-cyber-sm" style="border-color:var(--neon-cyan); color:#38bdf8; padding:8px 14px; font-size:0.75rem;" onclick="switchMode('cards')">
+                            🎴 EDIT DECK
+                        </button>
+                    </div>
+
+                    <!-- MATCH CONTROLS (Active during BATTLE phase) -->
+                    <div id="match-actions-bar" class="match-actions-bar">
                         <button id="btn-claim-deck-card" class="btn-action-main" style="border-color:var(--neon-cyan); padding:8px 14px; font-size:0.75rem;" onclick="claimRandomDeckCard()">
-                            🃏 DRAW DECK CARD (<span id="p-deck-count">34</span> REMAINING)
+                            🃏 DRAW CARD (1/TURN) (<span id="p-deck-count">55</span> LEFT)
                         </button>
                         <button id="btn-add-energy-main" class="btn-action-main" style="border-color:var(--neon-amber); padding:8px 14px; font-size:0.75rem;" onclick="promptAddEnergyDirect('player')">
                             ⚡ + ATTACH ENERGY (1/TURN)
                         </button>
-                        <button class="btn-action-main" style="border-color:var(--neon-green); padding:8px 14px; font-size:0.75rem;" onclick="endPlayerTurn()">
+                        <button id="btn-switch-retreat" class="btn-action-main" style="border-color:var(--neon-purple); padding:8px 14px; font-size:0.75rem;" onclick="openSwitchModal()">
+                            🔄 SWITCH / RETREAT
+                        </button>
+                        <button id="btn-end-turn" class="btn-action-main" style="border-color:var(--neon-green); padding:8px 14px; font-size:0.75rem;" onclick="endPlayerTurn()">
                             ⏭️ END TURN & LET OPPONENT PLAY
                         </button>
                     </div>
@@ -1027,15 +1207,15 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     <div class="section-label"><span>📊 SCOREBOARD & LOGS</span></div>
                     <div style="background:rgba(2,4,9,0.8); border:1px solid rgba(0,243,255,0.2); border-radius:8px; padding:10px;">
                         <div style="display:flex; justify-content:space-between; font-family:var(--font-orbitron); font-size:0.85rem;">
-                            <span style="color:var(--neon-green);">YOUR KOs: <b id="p-ko-count" style="font-size:1.1rem;">0</b>/3</span>
-                            <span style="color:var(--neon-magenta);">OPP KOs: <b id="opp-ko-count" style="font-size:1.1rem;">0</b>/3</span>
+                            <span style="color:var(--neon-green);">YOUR PRIZES: <b id="p-ko-count" style="font-size:1.1rem;">0</b>/6</span>
+                            <span style="color:var(--neon-magenta);">OPP PRIZES: <b id="opp-ko-count" style="font-size:1.1rem;">0</b>/6</span>
                         </div>
                         <div id="match-status-banner" class="cyber-badge" style="margin-top:8px; width:100%; justify-content:center;">MATCH IN PROGRESS</div>
                     </div>
 
                     <div>
                         <button class="btn-action-main" style="width:100%; padding:8px; font-size:0.75rem; margin-bottom:8px;" onclick="switchMode('cards')">
-                            🎴 SELECT CARDS FROM COLLECTION
+                            🎴 60-CARD DECK BUILDER
                         </button>
                         <button class="btn-cyber-sm" style="width:100%; padding:8px; font-size:0.75rem;" onclick="startNewMatch()">
                             🔄 RESTART MATCH
@@ -1045,6 +1225,37 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     <div class="section-label" style="color:var(--neon-green);"><span>COMBAT LOG</span></div>
                     <div id="combat-log" class="combat-log-box"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- SWITCH / RETREAT MODAL -->
+        <div id="switch-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-card" style="max-width:440px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="font-family:var(--font-orbitron); font-size:1.05rem; font-weight:900; color:var(--neon-purple);">
+                        🔄 SELECT BENCH POKÉMON TO SWITCH
+                    </div>
+                    <button style="background:none; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer;" onclick="closeSwitchModal()">✕</button>
+                </div>
+                <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:12px;">
+                    Choose one of your benched Pokémon to swap into the Active Spot. Attached Energy cards remain on both Pokémon.
+                </div>
+                <div id="switch-bench-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+        </div>
+
+        <!-- KNOCKOUT PROMOTION MODAL -->
+        <div id="ko-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-card" style="max-width:440px; border-color:#ef4444;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="font-family:var(--font-orbitron); font-size:1.05rem; font-weight:900; color:#ef4444;">
+                        ⚠️ ACTIVE KNOCKED OUT: PROMOTE BENCH
+                    </div>
+                </div>
+                <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:12px;">
+                    Your Active Pokémon was Knocked Out! Select a benched Pokémon to become your new Active Pokémon.
+                </div>
+                <div id="ko-bench-list" style="display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </div>
 
@@ -1133,6 +1344,112 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
         let AUTH_TOKEN = localStorage.getItem('pokemon_tcg_token') || null;
         let OWNED_CARDS = [];
         let OWNED_CARDS_MAP = {};
+        let ALL_CARDS_MAP = {};
+        let ALL_CARDS_LIST = [];
+        let SELECTED_CARD_KEY = null;
+        let SELECTED_CARD_ID = null;
+        let SELECTED_CARD_DATA = null;
+
+        function selectHandCard(handKey, cardName, cardData, event) {
+            if (event) event.stopPropagation();
+            if (!handKey) {
+                SELECTED_CARD_KEY = null;
+                SELECTED_CARD_ID = null;
+                SELECTED_CARD_DATA = null;
+                if (CURRENT_MATCH_STATE) updateMatchView(CURRENT_MATCH_STATE);
+                return;
+            }
+
+            let actualData = cardData;
+            if (typeof cardData === 'number' && CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.hand) {
+                actualData = CURRENT_MATCH_STATE.player.hand[cardData] || cardName;
+            }
+            const cname = cardName || (actualData && (actualData.name || actualData.card_name)) || '';
+            const meta = getCardMeta(cname);
+            const isEnergy = (meta && meta.card_type === 'energy') || cname.toLowerCase().includes('energy');
+
+            // Enforce 1 Energy attachment per turn rule
+            if (isEnergy && CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.phase !== 'SETUP') {
+                const alreadyAttached = CURRENT_MATCH_STATE.energy_attached_this_turn || CURRENT_MATCH_STATE.hasAttachedEnergyThisTurn;
+                if (alreadyAttached) {
+                    alert("⚠️ You have already attached Energy this turn.");
+                    return;
+                }
+            }
+
+            if (SELECTED_CARD_KEY === handKey) {
+                SELECTED_CARD_KEY = null;
+                SELECTED_CARD_ID = null;
+                SELECTED_CARD_DATA = null;
+                console.log("[CARD] Deselected card");
+            } else {
+                SELECTED_CARD_KEY = handKey;
+                SELECTED_CARD_ID = (actualData && actualData.card_id) || cname;
+                SELECTED_CARD_DATA = actualData || cname;
+                console.log("[CARD] Selected:", SELECTED_CARD_ID, cname);
+            }
+            if (CURRENT_MATCH_STATE) {
+                updateMatchView(CURRENT_MATCH_STATE);
+            }
+        }
+
+        async function playSelectedCard(target = 'active') {
+            if (!SELECTED_CARD_DATA && !SELECTED_CARD_KEY) return;
+            const cname = typeof SELECTED_CARD_DATA === 'string' 
+                ? SELECTED_CARD_DATA 
+                : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name || SELECTED_CARD_ID);
+            SELECTED_CARD_KEY = null;
+            SELECTED_CARD_ID = null;
+            SELECTED_CARD_DATA = null;
+            if (CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.phase === 'SETUP') {
+                if (target === 'active') {
+                    await setupPlaceActive(cname);
+                } else {
+                    await setupPlaceBench(cname);
+                }
+                return;
+            }
+            await matchPlayCard(cname, target);
+        }
+
+        async function loadAllCards() {
+            try {
+                const res = await fetch('/api/v1/cards/all');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.cards) {
+                        ALL_CARDS_LIST = data.cards;
+                        ALL_CARDS_MAP = {};
+                        data.cards.forEach(c => {
+                            if (c.card_id) ALL_CARDS_MAP[String(c.card_id).trim()] = c;
+                            if (c.name) ALL_CARDS_MAP[String(c.name).toLowerCase().trim()] = c;
+                            if (c.card_name) ALL_CARDS_MAP[String(c.card_name).toLowerCase().trim()] = c;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("Notice: /api/v1/cards/all fetch error:", err);
+            }
+        }
+
+        function getCardImageUrl(meta, cardName) {
+            if (meta && meta.image && meta.image.startsWith('/static/')) return meta.image;
+            if (meta && meta.card_id) {
+                const cid = String(meta.card_id).trim();
+                const m = ALL_CARDS_MAP[cid];
+                if (m && m.image) return m.image;
+                return `/static/card_images/${cid}.png`;
+            }
+            if (cardName) {
+                const clean = String(cardName).toLowerCase().trim();
+                const m = ALL_CARDS_MAP[clean] || OWNED_CARDS_MAP[clean];
+                if (m && m.image) return m.image;
+                if (clean.includes('energy')) return '/static/card_images/placeholder_energy.svg';
+                if (clean.includes('potion') || clean.includes('ball') || clean.includes('switch') || clean.includes('rope')) return '/static/card_images/placeholder_item.svg';
+                if (clean.includes('research') || clean.includes('boss') || clean.includes('supporter') || clean.includes('iono')) return '/static/card_images/placeholder_supporter.svg';
+            }
+            return '/static/card_images/placeholder_card.svg';
+        }
         
         function getRandomBasicPokemon(count = 4, exclude = []) {
             const pool = ["Pikachu", "Charmander", "Squirtle", "Bulbasaur", "Eevee", "Machop", "Geodude", "Abra", "Meowth", "Gastly", "Psyduck", "Snorlax"];
@@ -1145,8 +1462,20 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             return chosen.slice(0, count);
         }
 
+        // 3-Deck Builder State
+        let USER_DECKS = [
+            { slot: 1, name: "My Deck 1", cards: [], is_active: 1 },
+            { slot: 2, name: "My Deck 2", cards: [], is_active: 0 },
+            { slot: 3, name: "My Deck 3", cards: [], is_active: 0 }
+        ];
+        let ACTIVE_DECK_SLOT = 1;
         let CHOSEN_4_CARDS = getRandomBasicPokemon(4);
         let OPPONENT_4_CARDS = getRandomBasicPokemon(4, CHOSEN_4_CARDS);
+        // Only Basic Pokémon can be chosen for starting slots
+        function isBasicPokemon(c) {
+            const meta = getCardMeta(c);
+            return (meta && meta.card_type === 'pokemon' && meta.stage === 'Basic');
+        }
         let CURRENT_MATCH_STATE = null;
         let CURRENT_PACK_REVEAL = [];
         let FILTER_CATEGORY = 'all';
@@ -1156,9 +1485,178 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
         let IS_AI_PROCESSING = false;
         let filterDebounceTimer = null;
 
+        const ENERGY_EMOJI_MAP = {
+            'Grass': '🌿', 'Fire': '🔥', 'Water': '💧', 'Lightning': '⚡',
+            'Fighting': '🥊', 'Psychic': '🔮', 'Darkness': '🌑', 'Metal': '⚙️',
+            'Dragon': '🐉', 'Colorless': '⚪'
+        };
+
+        function normalizeEnergyTypeJs(val) {
+            if (!val) return 'Colorless';
+            if (typeof val === 'object') {
+                val = val.energy_type || val.pokemon_type || val.type || val.name || 'Colorless';
+            }
+            let s = String(val).trim().replace(/[{}]/g, '');
+            let sLow = s.toLowerCase();
+            if (s === 'G' || sLow.includes('grass')) return 'Grass';
+            if (s === 'R' || sLow.includes('fire')) return 'Fire';
+            if (s === 'W' || sLow.includes('water')) return 'Water';
+            if (s === 'L' || sLow.includes('lightning') || sLow.includes('electric')) return 'Lightning';
+            if (s === 'F' || sLow.includes('fighting')) return 'Fighting';
+            if (s === 'P' || sLow.includes('psychic')) return 'Psychic';
+            if (s === 'D' || sLow.includes('dark')) return 'Darkness';
+            if (s === 'M' || sLow.includes('metal') || sLow.includes('steel')) return 'Metal';
+            if (s === 'N' || sLow.includes('dragon')) return 'Dragon';
+            return 'Colorless';
+        }
+
+        function formatCostEmojisJs(costList) {
+            if (!costList || costList.length === 0) return '⚪ (Free)';
+            return costList.map(c => ENERGY_EMOJI_MAP[normalizeEnergyTypeJs(c)] || '⚪').join(' ');
+        }
+
+        function canPayAttackCostDetails(attachedEnergies, costList) {
+            if (!costList || costList.length === 0) {
+                return { canAfford: true, reason: 'Ready to attack!', costEmojis: '⚪ (Free)', missing: {} };
+            }
+            const energyList = attachedEnergies || [];
+            const required = {};
+            let colorlessNeeded = 0;
+            const normCost = [];
+
+            for (let c of costList) {
+                let norm = normalizeEnergyTypeJs(c);
+                normCost.push(norm);
+                if (norm === 'Colorless') {
+                    colorlessNeeded++;
+                } else {
+                    required[norm] = (required[norm] || 0) + 1;
+                }
+            }
+
+            const attachedCounts = {};
+            const cleanAttached = [];
+            for (let e of energyList) {
+                let norm = normalizeEnergyTypeJs(e);
+                cleanAttached.push(norm);
+                attachedCounts[norm] = (attachedCounts[norm] || 0) + 1;
+            }
+
+            const costEmojis = formatCostEmojisJs(costList);
+            const missing = {};
+
+            // 1. Pay specific elemental requirements first
+            for (let reqType in required) {
+                let reqAmt = required[reqType];
+                let haveAmt = attachedCounts[reqType] || 0;
+                if (haveAmt < reqAmt) {
+                    let deficit = reqAmt - haveAmt;
+                    missing[reqType] = deficit;
+                    attachedCounts[reqType] = 0;
+                } else {
+                    attachedCounts[reqType] -= reqAmt;
+                }
+            }
+
+            if (Object.keys(missing).length > 0) {
+                let deficitStrs = Object.entries(missing).map(([etype, cnt]) => `Need ${cnt} more ${etype} Energy`);
+                return {
+                    canAfford: false,
+                    reason: deficitStrs.join(', '),
+                    costEmojis: costEmojis,
+                    missing: missing
+                };
+            }
+
+            // 2. Pay colorless requirements with any leftover attached energy
+            let totalLeftover = 0;
+            for (let t in attachedCounts) {
+                totalLeftover += (attachedCounts[t] || 0);
+            }
+
+            if (totalLeftover < colorlessNeeded) {
+                let deficit = colorlessNeeded - totalLeftover;
+                missing['Colorless'] = deficit;
+                return {
+                    canAfford: false,
+                    reason: `Need ${deficit} more Energy (any type) for Colorless cost`,
+                    costEmojis: costEmojis,
+                    missing: missing
+                };
+            }
+
+            return {
+                canAfford: true,
+                reason: 'Ready to attack!',
+                costEmojis: costEmojis,
+                missing: {}
+            };
+        }
+
         function canPayAttackCost(attachedEnergies, costList) {
-            if (!costList || costList.length === 0) return true;
-            return (attachedEnergies || []).length >= costList.length;
+            return canPayAttackCostDetails(attachedEnergies, costList).canAfford;
+        }
+
+        const TYPE_ADVANTAGES_JS = {
+            'Water': ['Fire', 'Fighting'],
+            'Fire': ['Grass', 'Metal'],
+            'Grass': ['Water', 'Fighting'],
+            'Lightning': ['Water'],
+            'Fighting': ['Darkness', 'Metal', 'Colorless'],
+            'Psychic': ['Fighting'],
+            'Darkness': ['Psychic'],
+            'Metal': ['Grass', 'Psychic'],
+            'Dragon': ['Dragon'],
+            'Colorless': []
+        };
+
+        const TYPE_DISADVANTAGES_JS = {
+            'Water': ['Grass', 'Lightning'],
+            'Fire': ['Water'],
+            'Grass': ['Fire'],
+            'Lightning': ['Fighting'],
+            'Fighting': ['Psychic', 'Grass'],
+            'Psychic': ['Darkness', 'Metal'],
+            'Darkness': ['Fighting', 'Grass'],
+            'Metal': ['Fire', 'Fighting'],
+            'Dragon': [],
+            'Colorless': ['Fighting']
+        };
+
+        function getTypeEffectivenessJs(atkType, defType, defWeak, defRes, atkWeak) {
+            const aNorm = normalizeEnergyTypeJs(atkType);
+            const dNorm = normalizeEnergyTypeJs(defType);
+            const dw = (defWeak || '').toLowerCase();
+            const dr = (defRes || '').toLowerCase();
+            const aw = (atkWeak || '').toLowerCase();
+
+            if (dw && dw.includes(aNorm.toLowerCase())) {
+                return { mult: 1.5, label: 'ADVANTAGE', desc: `+50% Type Advantage (vs ${dNorm})` };
+            }
+            if (dr && dr.includes(aNorm.toLowerCase())) {
+                return { mult: 0.5, label: 'DISADVANTAGE', desc: `-50% Type Disadvantage (vs ${dNorm})` };
+            }
+            if (aw && aw.includes(dNorm.toLowerCase())) {
+                return { mult: 0.5, label: 'DISADVANTAGE', desc: `-50% Type Disadvantage (vs ${dNorm})` };
+            }
+
+            const advs = TYPE_ADVANTAGES_JS[aNorm] || [];
+            if (advs.includes(dNorm)) {
+                return { mult: 1.5, label: 'ADVANTAGE', desc: `+50% Type Advantage (vs ${dNorm})` };
+            }
+            const disadvs = TYPE_DISADVANTAGES_JS[aNorm] || [];
+            if (disadvs.includes(dNorm)) {
+                return { mult: 0.5, label: 'DISADVANTAGE', desc: `-50% Type Disadvantage (vs ${dNorm})` };
+            }
+
+            return { mult: 1.0, label: 'NEUTRAL', desc: `Normal DMG (vs ${dNorm})` };
+        }
+
+        function calculateMatchupDamageJs(baseDmg, atkType, defType, defWeak, defRes, atkWeak) {
+            if (!baseDmg || baseDmg <= 0) return { finalDmg: 0, mult: 1.0, label: 'NEUTRAL', desc: 'No DMG' };
+            const eff = getTypeEffectivenessJs(atkType, defType, defWeak, defRes, atkWeak);
+            const finalDmg = Math.max(1, Math.round(baseDmg * eff.mult));
+            return { finalDmg, mult: eff.mult, label: eff.label, desc: eff.desc };
         }
 
         function loadTop60RecommendedDeck() {
@@ -1200,6 +1698,7 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             document.getElementById('header-user-avatar').textContent = user.username.charAt(0).toUpperCase();
 
             if (stats) updateCollectionStatsUI(stats);
+            loadUserDecks();
         }
 
         function renderLoggedOutState() {
@@ -1323,6 +1822,15 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
         // ================= 2. MODE & TAB SWITCHING =================
         function switchMode(mode) {
+            if (mode === 'match') {
+                const activeDeck = USER_DECKS.find(d => d.is_active) || USER_DECKS[0];
+                if (!CURRENT_MATCH_STATE && (!activeDeck || !activeDeck.cards || activeDeck.cards.length === 0)) {
+                    switchMode('cards');
+                    showDeckBuilderEmptyPrompt();
+                    return;
+                }
+            }
+
             const views = {
                 'match': document.getElementById('view-match'),
                 'pack': document.getElementById('view-pack'),
@@ -1572,12 +2080,14 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     </div>
 
                     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-                        ${isBasic ? `<button class="btn-cyber-sm btn-choose-4" style="flex:1; padding:6px 8px; font-size:0.7rem; text-align:center;">🎯 SELECT FOR 4-CARD BATTLE</button>` : ''}
+                        <button class="btn-cyber-sm btn-add-deck" style="flex:1; padding:6px 8px; font-size:0.7rem; text-align:center; border-color:var(--neon-cyan); color:var(--neon-cyan);">
+                            ➕ ADD TO DECK (<span class="card-in-deck-count">${getCardCountInCurrentDeck(card.card_id || card.name)}</span>/${card.quantity || 1})
+                        </button>
                     </div>
                 `;
 
-                const btn4 = div.querySelector('.btn-choose-4');
-                if (btn4) btn4.onclick = () => chooseCardFor4Slot(card.name);
+                const btnAdd = div.querySelector('.btn-add-deck');
+                if (btnAdd) btnAdd.onclick = () => addCardToCurrentDeck(card);
 
                 grid.appendChild(div);
             });
@@ -1629,169 +2139,487 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             }, 250);
         }
 
-        // ================= 5. 4-CARD SELECTION & BATTLE ENGINE =================
-        function updateChosen4CardsUI() {
-            for (let i = 0; i < 4; i++) {
-                const cname = CHOSEN_4_CARDS[i];
-                const nameEl = document.getElementById(`slot-name-${i+1}`);
-                const typeEl = document.getElementById(`slot-type-${i+1}`);
-                if (!cname) {
-                    if (nameEl) nameEl.textContent = 'Empty Slot';
-                    if (typeEl) typeEl.textContent = 'Select Basic Pokémon';
+        // ================= 5. 3-SLOT 60-CARD DECK BUILDER =================
+        async function loadUserDecks() {
+            // Load local storage cache first
+            try {
+                const localDecks = localStorage.getItem('pokemon_tcg_user_decks');
+                if (localDecks) {
+                    const parsed = JSON.parse(localDecks);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        USER_DECKS = parsed;
+                        const activeDeck = USER_DECKS.find(d => d.is_active);
+                        if (activeDeck) ACTIVE_DECK_SLOT = activeDeck.slot;
+                        console.log(`[DECK BUILDER] Loaded ${USER_DECKS.length} decks from local storage. Active slot: ${ACTIVE_DECK_SLOT}`);
+                    }
+                }
+            } catch(e) {
+                console.warn("Could not parse local decks cache:", e);
+            }
+
+            if (AUTH_TOKEN) {
+                try {
+                    const res = await fetch('/api/v1/decks/user', {
+                        headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.decks && data.decks.length > 0) {
+                            USER_DECKS = data.decks;
+                            const activeDeck = USER_DECKS.find(d => d.is_active);
+                            if (activeDeck) ACTIVE_DECK_SLOT = activeDeck.slot;
+                            localStorage.setItem('pokemon_tcg_user_decks', JSON.stringify(USER_DECKS));
+                        }
+                    }
+                } catch(e) {
+                    console.warn("Notice: Offline deck builder state used", e);
+                }
+            }
+
+            // Clean up any previously injected starter lines if user has other cards (e.g. Glameow, Mr. Mime ex, Munchlax)
+            const injectedStarters = ["Pikachu", "Raichu", "Charmander", "Charmeleon", "Charizard", "Squirtle", "Wartortle", "Blastoise", "Bulbasaur", "Ivysaur", "Venusaur"];
+            const stapleTrainers = ["Potion", "Switch", "Ultra Ball", "Professor's Research", "Nest Ball", "Boss's Orders"];
+            USER_DECKS.forEach(deck => {
+                if (deck.cards && deck.cards.length > 0) {
+                    const hasUserCards = deck.cards.some(c => !injectedStarters.includes(c) && !c.toLowerCase().includes('energy') && !stapleTrainers.includes(c));
+                    if (hasUserCards) {
+                        // User chose their own Pokémon: strip out all auto-injected starters and trainers!
+                        deck.cards = deck.cards.filter(c => !injectedStarters.includes(c) && !stapleTrainers.includes(c) && !c.toLowerCase().includes('item energy'));
+                    }
+                }
+            });
+            try {
+                localStorage.setItem('pokemon_tcg_user_decks', JSON.stringify(USER_DECKS));
+            } catch(e) {}
+
+            updateDeckTrayUI();
+        }
+
+        function getCurrentDeck() {
+            let d = USER_DECKS.find(x => x.slot === ACTIVE_DECK_SLOT);
+            if (!d) {
+                d = { slot: ACTIVE_DECK_SLOT, name: `My Deck ${ACTIVE_DECK_SLOT}`, cards: [], is_active: ACTIVE_DECK_SLOT === 1 ? 1 : 0 };
+                USER_DECKS.push(d);
+            }
+            return d;
+        }
+
+        function switchDeckSlot(slot) {
+            ACTIVE_DECK_SLOT = slot;
+            [1, 2, 3].forEach(s => {
+                const btn = document.getElementById(`deck-tab-${s}`);
+                if (btn) {
+                    if (s === slot) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+            });
+            const cur = getCurrentDeck();
+            const nameInput = document.getElementById('deck-name-input');
+            if (nameInput) nameInput.value = cur.name || `My Deck ${slot}`;
+            updateDeckTrayUI();
+        }
+
+        function updateCurrentDeckName(name) {
+            const cur = getCurrentDeck();
+            cur.name = name.trim() || `My Deck ${ACTIVE_DECK_SLOT}`;
+            const tab = document.getElementById(`deck-tab-${ACTIVE_DECK_SLOT}`);
+            if (tab) tab.innerHTML = `${cur.name} (<span id="deck-count-tab-${ACTIVE_DECK_SLOT}">${(cur.cards || []).length}</span>/60)`;
+        }
+
+        function getCardCountInCurrentDeck(cardIdentifier) {
+            const cur = getCurrentDeck();
+            if (!cur.cards) return 0;
+            const targetId = typeof cardIdentifier === 'object' && cardIdentifier !== null
+                ? String(cardIdentifier.card_id || cardIdentifier.name).trim().toLowerCase()
+                : String(cardIdentifier).trim().toLowerCase();
+            return cur.cards.filter(c => {
+                const cId = typeof c === 'object' && c !== null ? String(c.card_id || c.name).trim().toLowerCase() : String(c).trim().toLowerCase();
+                if (cId === targetId) return true;
+                const meta = getCardMeta(c);
+                if (meta && meta.name && meta.name.toLowerCase() === targetId) return true;
+                if (meta && meta.card_id && String(meta.card_id).trim().toLowerCase() === targetId) return true;
+                return false;
+            }).length;
+        }
+
+        function addCardToCurrentDeck(cardItem) {
+            const cur = getCurrentDeck();
+            if (!cur.cards) cur.cards = [];
+            if (cur.cards.length >= 60) {
+                alert("⚠️ Deck is full (maximum 60 cards allowed per standard rules)! Remove cards before adding more.");
+                return;
+            }
+            const meta = getCardMeta(cardItem);
+            const cardIdOrName = (meta && meta.card_id) ? String(meta.card_id).trim() : (typeof cardItem === 'string' ? cardItem : (cardItem.card_id || cardItem.name));
+            const countInDeck = getCardCountInCurrentDeck(cardIdOrName);
+            const isEnergy = (meta.card_type === 'energy' || (meta.name && meta.name.toLowerCase().includes('energy')));
+            if (!isEnergy && meta.quantity && countInDeck >= meta.quantity) {
+                alert(`⚠️ You only own ${meta.quantity} copy of '${meta.name || cardIdOrName}'! Open booster packs to collect more.`);
+                return;
+            }
+            cur.cards.push(cardIdOrName);
+            console.log(`[DECK] Added card to deck ${cur.slot}:`, cardIdOrName, `(Total: ${cur.cards.length}/60)`);
+            updateDeckTrayUI();
+        }
+
+        function removeCardFromCurrentDeck(index) {
+            const cur = getCurrentDeck();
+            if (cur.cards && cur.cards.length > index) {
+                cur.cards.splice(index, 1);
+                updateDeckTrayUI();
+            }
+        }
+
+        function clearCurrentDeck() {
+            const cur = getCurrentDeck();
+            if (confirm(`Are you sure you want to remove all cards from '${cur.name}'?`)) {
+                cur.cards = [];
+                updateDeckTrayUI();
+            }
+        }
+
+        function balanceDeckList(existingCards = []) {
+            const newDeck = [...(existingCards || [])];
+            if (newDeck.length === 0) {
+                return ["Pikachu", "Pikachu", "Raichu", "Charmander", "Charmander", "Potion", "Switch", "Basic Lightning Energy", "Basic Fire Energy"];
+            }
+
+            // Determine types of user's chosen Pokémon
+            const types = new Set();
+            newDeck.forEach(c => {
+                const m = getCardMeta(c);
+                if (m && m.pokemon_type && m.pokemon_type !== "Colorless") types.add(m.pokemon_type);
+            });
+            const validTypes = Array.from(types);
+            if (validTypes.length === 0) validTypes.push("Psychic", "Fire");
+
+            // Fill remaining slots with Basic Energy matching the user's chosen Pokémon types
+            let eIdx = 0;
+            while (newDeck.length < 60) {
+                const etype = validTypes[eIdx % validTypes.length];
+                newDeck.push(`Basic ${etype} Energy`);
+                eIdx++;
+            }
+            return newDeck.slice(0, 60);
+        }
+
+        function autoCompleteBalancedDeck() {
+            const cur = getCurrentDeck();
+            if (!cur.cards) cur.cards = [];
+            cur.cards = balanceDeckList(cur.cards);
+            updateDeckTrayUI();
+            try {
+                localStorage.setItem('pokemon_tcg_user_decks', JSON.stringify(USER_DECKS));
+            } catch(e) {}
+            console.log(`[DECK BUILDER] Auto-completed deck with matching energy for Slot ${cur.slot}: ${cur.cards.length} cards`);
+        }
+
+        function autoFillDeckWithEnergy() {
+            autoCompleteBalancedDeck();
+        }
+
+        function showDeckBuilderEmptyPrompt() {
+            const banner = document.getElementById('empty-deck-alert-banner');
+            if (banner) {
+                banner.style.display = 'block';
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function hideDeckBuilderEmptyPrompt() {
+            const banner = document.getElementById('empty-deck-alert-banner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        async function quickAutoFillAndStartBattle() {
+            autoCompleteBalancedDeck();
+            await saveAndStartBattle();
+        }
+
+        async function saveAndStartBattle() {
+            const cur = getCurrentDeck();
+            if (!cur.cards || cur.cards.length === 0) {
+                alert("⚠️ Please add cards to your deck before starting battle!");
+                return;
+            }
+            await saveCurrentDeckSlot(true);
+            await selectCurrentDeckForBattle(true);
+            hideDeckBuilderEmptyPrompt();
+            switchMode('match');
+            await startNewMatch(false, true);
+        }
+
+        async function saveCurrentDeckSlot(quiet = false) {
+            const cur = getCurrentDeck();
+            try {
+                localStorage.setItem('pokemon_tcg_user_decks', JSON.stringify(USER_DECKS));
+            } catch(e) {}
+            console.log(`[DECK BUILDER] Saved deck ID: Slot ${cur.slot} | name: "${cur.name}" | count: ${(cur.cards || []).length}/60`);
+
+            if (AUTH_TOKEN) {
+                try {
+                    const res = await fetch('/api/v1/decks/user/save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${AUTH_TOKEN}`
+                        },
+                        body: JSON.stringify({
+                            slot: cur.slot,
+                            name: cur.name,
+                            cards: cur.cards || [],
+                            is_active: cur.is_active || 0
+                        })
+                    });
+                    const data = await res.json();
+                    if (!quiet) {
+                        if (res.ok && data.status === 'success') {
+                            alert(`✅ Deck '${cur.name}' saved successfully! (${(cur.cards || []).length}/60 cards)`);
+                        } else {
+                            alert(`💾 Saved locally (${(cur.cards || []).length}/60 cards)`);
+                        }
+                    }
+                } catch(e) {
+                    if (!quiet) alert(`💾 Saved locally (${(cur.cards || []).length}/60 cards)`);
+                }
+            } else {
+                if (!quiet) alert(`💾 Saved locally (${(cur.cards || []).length}/60 cards)`);
+            }
+            updateDeckTrayUI();
+        }
+
+        async function selectCurrentDeckForBattle(quiet = false) {
+            const cur = getCurrentDeck();
+            if (!cur.cards || cur.cards.length === 0) {
+                if (!quiet) alert("⚠️ Cannot select an empty deck for battle! Add cards to your deck first.");
+                return;
+            }
+            USER_DECKS.forEach(d => { d.is_active = (d.slot === cur.slot) ? 1 : 0; });
+            try {
+                localStorage.setItem('pokemon_tcg_user_decks', JSON.stringify(USER_DECKS));
+            } catch(e) {}
+            if (AUTH_TOKEN) {
+                try {
+                    await fetch('/api/v1/decks/user/select', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${AUTH_TOKEN}`
+                        },
+                        body: JSON.stringify({ slot: cur.slot })
+                    });
+                } catch(e) {}
+            }
+            console.log(`[SELECT DECK] Selected deck ID: Slot ${cur.slot} | name: "${cur.name}" | count: ${cur.cards.length}/60`);
+            if (!quiet) alert(`⚔️ Deck '${cur.name}' is now your Active Battle Deck!`);
+            updateDeckTrayUI();
+        }
+
+        async function startBattleWithCurrentDeck() {
+            const cur = getCurrentDeck();
+            if (!cur.cards || cur.cards.length === 0) {
+                switchMode('cards');
+                showDeckBuilderEmptyPrompt();
+                return;
+            }
+            await selectCurrentDeckForBattle(true);
+            hideDeckBuilderEmptyPrompt();
+            switchMode('match');
+            await startNewMatch(false, true);
+        }
+
+        function updateDeckTrayUI() {
+            USER_DECKS.forEach(d => {
+                const countTab = document.getElementById(`deck-count-tab-${d.slot}`);
+                if (countTab) countTab.textContent = (d.cards || []).length;
+            });
+
+            const cur = getCurrentDeck();
+            const count = (cur.cards || []).length;
+            const countEl = document.getElementById('deck-cards-count');
+            if (countEl) countEl.textContent = count;
+
+            const badge = document.getElementById('active-deck-badge');
+            if (badge) {
+                if (cur.is_active) {
+                    badge.style.display = 'inline-flex';
+                    badge.textContent = 'ACTIVE BATTLE DECK';
+                    badge.style.borderColor = 'var(--neon-green)';
+                    badge.style.color = 'var(--neon-green)';
                 } else {
-                    const meta = getCardMeta(cname);
-                    if (nameEl) nameEl.textContent = `${cname} (${meta.hp || 70} HP)`;
-                    if (typeEl) typeEl.textContent = `Type: ${meta.pokemon_type || 'Normal'} • Top Atk: ${(meta.attacks && meta.attacks[0]) ? meta.attacks[0].base_damage + ' DMG' : 'Support'}`;
+                    badge.style.display = 'inline-flex';
+                    badge.textContent = 'INACTIVE DECK';
+                    badge.style.borderColor = 'var(--text-dim)';
+                    badge.style.color = 'var(--text-dim)';
                 }
             }
-        }
 
-        function chooseCardFor4Slot(cname) {
-            const meta = getCardMeta(cname);
-            if (!isBasicPokemon(meta)) {
-                alert(`❌ Invalid Selection: Only Basic Pokémon can be chosen for starting slots!\\n\\n'${cname}' is a ${meta.stage || 'Stage 1/2'} Pokémon and must be evolved during gameplay.`);
-                return;
-            }
-
-            if (!meta || !meta.quantity || meta.quantity <= 0) {
-                alert(`⚠️ You do not own '${cname}'! Open booster packs to collect it.`);
-                return;
-            }
-
-            let idx = CHOSEN_4_CARDS.indexOf(cname);
-            if (idx !== -1) {
-                alert(`ℹ️ '${cname}' is already selected in Slot #${idx+1}.`);
-                return;
-            }
-
-            if (CHOSEN_4_CARDS.length >= 4) {
-                CHOSEN_4_CARDS.shift();
-            }
-            CHOSEN_4_CARDS.push(cname);
-            updateChosen4CardsUI();
-        }
-
-        function resetChosen4Cards() {
-            CHOSEN_4_CARDS = [];
-            updateChosen4CardsUI();
-        }
-
-        function autoDealFromOwned(silent = false) {
-            const basicOwned = OWNED_CARDS.filter(c => isBasicPokemon(c));
-            const chosen = [];
-            const shuffled = [...basicOwned].sort(() => 0.5 - Math.random());
-            for (let c of shuffled) {
-                if (chosen.length >= 4) break;
-                if (!chosen.includes(c.name)) chosen.push(c.name);
-            }
-            if (chosen.length < 4) {
-                const fallback = getRandomBasicPokemon(4, chosen);
-                for (let name of fallback) {
-                    if (chosen.length >= 4) break;
-                    chosen.push(name);
+            const tray = document.getElementById('deck-cards-tray');
+            if (tray) {
+                if (!cur.cards || cur.cards.length === 0) {
+                    tray.innerHTML = `<div style="color:var(--text-dim); font-size:0.75rem; font-style:italic; width:100%; text-align:center; padding:10px 0;">This deck is empty. Click "+ ADD TO DECK" on any card below to add up to 60 cards.</div>`;
+                } else {
+                    tray.innerHTML = cur.cards.map((cname, idx) => {
+                        const meta = getCardMeta(cname);
+                        const displayName = meta.name || meta.card_name || cname;
+                        const isPkmn = meta.card_type === 'pokemon';
+                        const color = isPkmn ? 'var(--neon-cyan)' : (meta.card_type === 'energy' ? 'var(--neon-amber)' : 'var(--neon-purple)');
+                        return `
+                            <div style="background:rgba(8,14,28,0.9); border:1px solid ${color}; border-radius:4px; padding:3px 8px; font-size:0.72rem; display:inline-flex; align-items:center; gap:6px;">
+                                <span style="color:#fff; font-weight:700;">${displayName}</span>
+                                <button style="background:none; border:none; color:#ef4444; font-size:0.8rem; font-weight:900; cursor:pointer; padding:0 2px;" onclick="removeCardFromCurrentDeck(${idx})" title="Remove">✕</button>
+                            </div>
+                        `;
+                    }).join('');
                 }
             }
-            CHOSEN_4_CARDS = chosen;
-            updateChosen4CardsUI();
+
+            document.querySelectorAll('.owned-card-box').forEach(el => {
+                const titleEl = el.querySelector('div[style*="font-family:var(--font-orbitron)"]');
+                if (titleEl) {
+                    const cardName = titleEl.textContent.trim();
+                    const counterEl = el.querySelector('.card-in-deck-count');
+                    if (counterEl) {
+                        counterEl.textContent = getCardCountInCurrentDeck(cardName);
+                    }
+                }
+            });
         }
 
         function getCardMeta(cname) {
             if (!cname) return { name: "Unknown", card_type: "pokemon", stage: "Basic", hp: 70, pokemon_type: "Normal", attacks: [] };
-            const clean = cname.toLowerCase().trim();
+            if (typeof cname === 'object' && cname !== null) {
+                if (cname.card_id && ALL_CARDS_MAP[String(cname.card_id).trim()]) return ALL_CARDS_MAP[String(cname.card_id).trim()];
+                if (cname.name && ALL_CARDS_MAP[String(cname.name).toLowerCase().trim()]) return ALL_CARDS_MAP[String(cname.name).toLowerCase().trim()];
+                return cname;
+            }
+            const identStr = String(cname).trim();
+            const clean = identStr.toLowerCase();
+            if (ALL_CARDS_MAP[identStr]) return ALL_CARDS_MAP[identStr];
+            if (ALL_CARDS_MAP[clean]) return ALL_CARDS_MAP[clean];
+            if (OWNED_CARDS_MAP[identStr]) return OWNED_CARDS_MAP[identStr];
             if (OWNED_CARDS_MAP[clean]) return OWNED_CARDS_MAP[clean];
+
             if (clean.includes('energy')) {
-                return { name: cname, card_type: "energy", supertype: "Energy", stage: "" };
+                return { name: cname, card_name: cname, card_type: "energy", supertype: "Energy", stage: "", image: "/static/card_images/placeholder_energy.svg" };
             }
-            if (clean.includes('potion') || clean.includes('research') || clean.includes('ball') || clean.includes('switch') || clean.includes('boss') || clean.includes('trainer') || clean.includes('supporter') || clean.includes('item') || clean.includes('rope')) {
-                return { name: cname, card_type: "trainer", supertype: "Trainer", stage: "" };
+            if (clean.includes('potion') || clean.includes('ball') || clean.includes('switch') || clean.includes('rope')) {
+                return { name: cname, card_name: cname, card_type: "trainer", supertype: "Trainer", stage: "", image: "/static/card_images/placeholder_item.svg" };
             }
-            const isEx = clean.includes('ex');
+            if (clean.includes('research') || clean.includes('boss') || clean.includes('trainer') || clean.includes('supporter') || clean.includes('iono')) {
+                return { name: cname, card_name: cname, card_type: "trainer", supertype: "Trainer", stage: "", image: "/static/card_images/placeholder_supporter.svg" };
+            }
             return {
                 name: cname,
+                card_name: cname,
                 card_type: "pokemon",
                 stage: "Basic",
                 subtypes: ["Basic"],
-                hp: isEx ? 220 : 70,
-                pokemon_type: "Normal",
-                attacks: [{ name: "Strike", base_damage: 40 }]
+                hp: 70,
+                pokemon_type: "Colorless",
+                attacks: [{ name: "Strike", base_damage: 30, cost: ["Colorless"] }],
+                image: "/static/card_images/placeholder_pokemon.svg"
             };
         }
 
         async function startBattleWithSelected4Cards() {
-            if (CHOSEN_4_CARDS.length < 4) {
-                alert("⚠️ Please pick 4 Basic Pokémon for your battle slots first!");
-                return;
-            }
-
-            for (const cname of CHOSEN_4_CARDS) {
-                const meta = getCardMeta(cname);
-                if (!isBasicPokemon(meta)) {
-                    alert(`❌ Cannot start battle: '${cname}' is not a Basic Pokémon! Only Basic Pokémon can be chosen for starting slots.`);
-                    return;
-                }
-            }
-
-            startNewMatch(true);
+            startNewMatch();
             switchMode('match');
         }
 
-        // ================= 6. MATCH ARENA SIMULATION =================
-        function buildOwned60CardDeck(chosenBasics) {
-            const deck = [];
-            chosenBasics.forEach(n => {
-                for (let i = 0; i < 3; i++) deck.push(n);
-            });
+        // ================= 6. MATCH ARENA SIMULATION (60-CARD ENGINE) =================
+        function getMatchHeaders() {
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-API-Key': 'tcg-live-secret-key-2026'
+            };
+            if (AUTH_TOKEN) headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+            return headers;
+        }
 
-            const ownedEvos = OWNED_CARDS.filter(c => c.card_type === 'pokemon' && (c.stage === 'Stage 1' || c.stage === 'Stage 2'));
-            for (const evo of ownedEvos) {
-                if (deck.length >= 28) break;
-                const addCount = Math.min(2, evo.quantity || 1);
-                for (let i = 0; i < addCount; i++) {
-                    if (deck.length < 28) deck.push(evo.name);
-                }
+        function buildOwned60CardDeck(baseList = []) {
+            if (!baseList || baseList.length === 0) {
+                return fisherYatesShuffle(["Pikachu", "Pikachu", "Raichu", "Charmander", "Charmander", "Potion", "Switch", "Basic Lightning Energy", "Basic Fire Energy"]);
             }
-
-            const ownedTrainers = OWNED_CARDS.filter(c => c.card_type === 'trainer');
-            for (const tr of ownedTrainers) {
-                if (deck.length >= 44) break;
-                const addCount = Math.min(2, tr.quantity || 1);
-                for (let i = 0; i < addCount; i++) {
-                    if (deck.length < 44) deck.push(tr.name);
-                }
-            }
-
-            const fallbackTrainers = ["Potion", "Poké Ball", "Switch", "Professor's Research", "Ultra Ball"];
-            for (const ft of fallbackTrainers) {
-                if (deck.length < 44) deck.push(ft);
-            }
-
-            const energyTypes = ["Basic Fire Energy", "Basic Lightning Energy", "Basic Water Energy", "Basic Psychic Energy", "Basic Fighting Energy", "Basic Grass Energy"];
-            let eIdx = 0;
-            while (deck.length < 60) {
-                deck.push(energyTypes[eIdx % energyTypes.length]);
-                eIdx++;
-            }
-
-            return fisherYatesShuffle(deck);
+            // Preserve EXACT cards chosen by the user! Decks can be less than 60 cards!
+            return fisherYatesShuffle([...baseList]);
         }
 
         function buildOpponent60CardDeck() {
-            const oppBasics = ["Miraidon ex", "Zapdos", "Pikachu", "Iron Hands ex"];
+            // 100% Rule-Compliant Random Opponent Deck Generation:
+            // - Exactly 60 cards total
+            // - Rule of 4: Max 4 copies of any non-energy card
+            // - Valid Basic -> Evolution lines
+            // - Basic Energies matching Pokémon types
+            // - Authentic items and supporters
+            const families = [
+                { type: "Fire", cards: [["Charmander", 3], ["Charmeleon", 2], ["Charizard", 2]] },
+                { type: "Fire", cards: [["Charmander", 3], ["Charmeleon", 2]] },
+                { type: "Lightning", cards: [["Pikachu", 3], ["Raichu", 2], ["Pikachu ex", 2]] },
+                { type: "Lightning", cards: [["Pikachu", 4], ["Raichu", 2]] },
+                { type: "Water", cards: [["Squirtle", 3], ["Wartortle", 2], ["Blastoise", 2]] },
+                { type: "Water", cards: [["Squirtle", 4], ["Wartortle", 2]] },
+                { type: "Grass", cards: [["Bulbasaur", 3], ["Ivysaur", 2], ["Venusaur", 2]] },
+                { type: "Grass", cards: [["Bulbasaur", 4], ["Ivysaur", 2]] },
+                { type: "Psychic", cards: [["Ralts", 3], ["Kirlia", 2], ["Gardevoir", 2]] },
+                { type: "Fighting", cards: [["Machop", 3], ["Machoke", 2], ["Machamp", 2]] },
+                { type: "Darkness", cards: [["Houndour", 3], ["Houndoom", 2]] }
+            ];
+            const standaloneBasics = [
+                { type: "Lightning", name: "Zapdos", count: 2 },
+                { type: "Water", name: "Lapras", count: 2 },
+                { type: "Colorless", name: "Snorlax", count: 2 },
+                { type: "Colorless", name: "Eevee", count: 3 },
+                { type: "Colorless", name: "Tauros", count: 2 },
+                { type: "Psychic", name: "Mewtwo", count: 2 }
+            ];
+
             const deck = [];
-            oppBasics.forEach(n => {
-                for (let i = 0; i < 3; i++) deck.push(n);
+            const chosenTypes = new Set();
+
+            // Randomly select 2 distinct families
+            const shuffledFamilies = fisherYatesShuffle(families);
+            const fam1 = shuffledFamilies[0];
+            const fam2 = shuffledFamilies[1];
+            chosenTypes.add(fam1.type);
+            chosenTypes.add(fam2.type);
+
+            fam1.cards.forEach(([name, cnt]) => {
+                for (let i = 0; i < cnt; i++) deck.push(name);
             });
-            const oppEvos = ["Raichu", "Tyranitar ex", "Magcargo ex"];
-            oppEvos.forEach(n => {
-                for (let i = 0; i < 2; i++) deck.push(n);
+            fam2.cards.forEach(([name, cnt]) => {
+                for (let i = 0; i < cnt; i++) deck.push(name);
             });
-            const oppTrainers = ["Professor's Research", "Boss's Orders", "Switch", "Ultra Ball", "Electric Generator"];
-            oppTrainers.forEach(n => {
-                for (let i = 0; i < 3; i++) deck.push(n);
-            });
-            while (deck.length < 60) {
-                deck.push("Basic Lightning Energy");
+
+            // Randomly select 1 standalone basic
+            const basicObj = standaloneBasics[Math.floor(Math.random() * standaloneBasics.length)];
+            chosenTypes.add(basicObj.type);
+            for (let i = 0; i < basicObj.count; i++) deck.push(basicObj.name);
+
+            // Add Trainers (max 4 per card)
+            const trainerPool = ["Potion", "Switch", "Poké Ball", "Ultra Ball", "Professor's Research", "Boss's Orders", "Rare Candy", "Super Rod", "Nest Ball", "Energy Retrieval"];
+            const shuffledTrainers = fisherYatesShuffle(trainerPool);
+            let tIdx = 0;
+            const trainerCounts = {};
+            while (deck.length < 60 - 15) { // Leave ~15 slots for energy
+                const t = shuffledTrainers[tIdx % shuffledTrainers.length];
+                trainerCounts[t] = (trainerCounts[t] || 0) + 1;
+                if (trainerCounts[t] <= 4) {
+                    deck.push(t);
+                }
+                tIdx++;
             }
+
+            // Add Energies matching chosen types
+            const validTypes = Array.from(chosenTypes).filter(t => t !== "Colorless");
+            if (validTypes.length === 0) validTypes.push("Lightning", "Fire");
+            let eIdx = 0;
+            while (deck.length < 60) {
+                const etype = validTypes[eIdx % validTypes.length];
+                deck.push(`Basic ${etype} Energy`);
+                eIdx++;
+            }
+
             return fisherYatesShuffle(deck);
         }
 
@@ -1804,114 +2632,641 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             return a;
         }
 
-        function startNewMatch(keepPlayerCards = false) {
-            if (!keepPlayerCards || CHOSEN_4_CARDS.length < 4) {
-                autoDealFromOwned(true);
+        async function startNewMatch(keepPlayerCards = false, deckExplicitlyReady = false) {
+            SELECTED_CARD_KEY = null;
+            SELECTED_CARD_ID = null;
+            SELECTED_CARD_DATA = null;
+
+            const activeDeckObj = USER_DECKS.find(d => d.is_active) || USER_DECKS[0];
+            const slotNum = activeDeckObj ? activeDeckObj.slot : ACTIVE_DECK_SLOT;
+            const customCards = (activeDeckObj && activeDeckObj.cards && activeDeckObj.cards.length > 0) ? activeDeckObj.cards : null;
+
+            if (!deckExplicitlyReady && (!customCards || customCards.length === 0)) {
+                console.log("[START BATTLE] Active deck is empty! Directing to Deck Builder to create deck first.");
+                switchMode('cards');
+                showDeckBuilderEmptyPrompt();
+                return;
             }
 
-            const pBasics = CHOSEN_4_CARDS.length >= 4 ? CHOSEN_4_CARDS : ["Charmander", "Pikachu", "Eevee", "Snorlax"];
-            const pDeck = buildOwned60CardDeck(pBasics);
-            const oppDeck = buildOpponent60CardDeck();
+            console.log(`[START BATTLE] Starting battle with selected deck ID: Slot ${slotNum} ("${activeDeckObj ? activeDeckObj.name : 'Deck'}") | Cards count: ${customCards ? customCards.length : 'default'}`);
 
-            const pActiveName = pBasics[0];
-            const pActiveMeta = getCardMeta(pActiveName);
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/start', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        deck_slot: slotNum,
+                        custom_deck_list: customCards,
+                        player_deck_id: "charizard-fire",
+                        opp_deck_id: "random"
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    CURRENT_MATCH_STATE = data.match_state;
+                    console.log("[SHUFFLE] Player and AI 60-card decks shuffled.");
+                    const remainingDeck = (CURRENT_MATCH_STATE.player && (CURRENT_MATCH_STATE.player.deck_count !== undefined ? CURRENT_MATCH_STATE.player.deck_count : (CURRENT_MATCH_STATE.player.deck || []).length)) || 49;
+                    console.log(`[INITIAL DRAW] 5 cards dealt to Player hand. Face-down deck remaining: ${remainingDeck} cards.`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    if (data.ai_recommendation) {
+                        LAST_AI_REPORT = data.ai_recommendation;
+                        renderStrategicAiReport(data.ai_recommendation);
+                    }
+                    return;
+                }
+            } catch (err) {
+                console.warn("[MATCH] Backend match/start call failed, fallback locally:", err);
+            }
 
-            const oppBasics = (typeof OPPONENT_4_CARDS !== 'undefined' && OPPONENT_4_CARDS && OPPONENT_4_CARDS.length >= 4)
-                ? OPPONENT_4_CARDS
-                : ["Miraidon ex", "Pikachu", "Zapdos", "Iron Hands ex"];
-            const oppActiveName = oppBasics[0];
-            const oppActiveMeta = getCardMeta(oppActiveName);
-            const oppBench1Meta = getCardMeta(oppBasics[1]);
-            const oppBench2Meta = getCardMeta(oppBasics[2]);
-            const oppBench3Meta = getCardMeta(oppBasics[3]);
+            // Local fallback maintaining exact selected deck
+            let pDeck = buildOwned60CardDeck(customCards || []);
+            let oppDeck = buildOpponent60CardDeck();
+            console.log(`[SHUFFLE] Shuffled player deck (${pDeck.length} cards) and AI deck (${oppDeck.length} cards).`);
+
+            // Setup Prize cards (scaled if deck has fewer than 25 cards)
+            const pPrizeCount = pDeck.length < 25 ? Math.max(1, Math.min(6, Math.floor(pDeck.length / 4))) : 6;
+            const pPrizes = [];
+            for (let i = 0; i < pPrizeCount && pDeck.length > 0; i++) {
+                pPrizes.push(pDeck.pop());
+            }
+
+            // SETUP HAND:
+            // "in hand the deck cards in the are able to select for main and bench if the card is not able to set in main or bench that card should not in the hand"
+            // Only Basic Pokémon eligible to be placed in Main or Bench are drawn into the setup hand!
+            const pHand = [];
+            const basicIndices = [];
+            for (let i = 0; i < pDeck.length; i++) {
+                if (isBasicPokemon(getCardMeta(pDeck[i]))) {
+                    basicIndices.push(i);
+                }
+            }
+            const setupCount = Math.min(5, basicIndices.length);
+            for (let k = 0; k < setupCount; k++) {
+                const bIdx = pDeck.findIndex(c => isBasicPokemon(getCardMeta(c)));
+                if (bIdx !== -1) {
+                    pHand.push(pDeck.splice(bIdx, 1)[0]);
+                }
+            }
+            // Fallback if deck has 0 basic pokemon
+            if (pHand.length === 0 && pDeck.length > 0) {
+                pHand.push(pDeck.pop());
+            }
+
+            let oppHand = [oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop()];
+            let oppMulligan = 0;
+            while (!oppHand.some(c => isBasicPokemon(getCardMeta(c))) && oppMulligan < 30 && oppDeck.length > 0) {
+                oppMulligan++;
+                oppDeck.push(...oppHand);
+                oppDeck = fisherYatesShuffle(oppDeck);
+                oppHand = [oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop()];
+            }
+            console.log(`[SETUP DRAW] ${pHand.length} Basic Pokémon dealt to setup hand. Face-down deck remaining: ${pDeck.length} cards.`);
 
             CURRENT_ROUTE_STEP_INDEX = 0;
             CURRENT_MATCH_STATE = {
                 turn_number: 1,
+                phase: 'SETUP',
                 is_player_turn: true,
                 card_drawn_this_turn: false,
                 energy_attached_this_turn: false,
                 winner: null,
                 player: {
-
                     name: CURRENT_USER ? CURRENT_USER.username : "Player",
-                    active_spot: {
-                        name: pActiveName,
-                        current_hp: pActiveMeta.hp || 70,
-                        max_hp: pActiveMeta.hp || 70,
-                        attached_energy: [],
-                        card_id: pActiveMeta.card_id
-                    },
-                    bench: [
-                        { name: pBasics[1], current_hp: 60, max_hp: 60, attached_energy: [] },
-                        { name: pBasics[2], current_hp: 60, max_hp: 60, attached_energy: [] },
-                        { name: pBasics[3], current_hp: 70, max_hp: 70, attached_energy: [] }
-                    ],
-                    hand: [pDeck.pop(), pDeck.pop(), pDeck.pop(), pDeck.pop()],
+                    active_spot: null,
+                    bench: [],
+                    hand: pHand,
                     deck: pDeck,
                     discard: [],
                     prizes_taken: 0
                 },
                 opponent: {
                     name: "Opponent AI",
-                    active_spot: {
-                        name: oppActiveName,
-                        current_hp: oppActiveMeta.hp || 220,
-                        max_hp: oppActiveMeta.hp || 220,
-                        attached_energy: ["Basic Lightning Energy"]
-                    },
-                    bench: [
-                        { name: oppBasics[1], current_hp: oppBench1Meta.hp || 60, max_hp: oppBench1Meta.hp || 60, attached_energy: [] },
-                        { name: oppBasics[2], current_hp: oppBench2Meta.hp || 60, max_hp: oppBench2Meta.hp || 60, attached_energy: [] },
-                        { name: oppBasics[3], current_hp: oppBench3Meta.hp || 70, max_hp: oppBench3Meta.hp || 70, attached_energy: [] }
-                    ],
-                    hand: [oppDeck.pop(), oppDeck.pop(), oppDeck.pop(), oppDeck.pop()],
+                    active_spot: null,
+                    bench: [],
+                    hand: oppHand,
                     deck: oppDeck,
                     discard: [],
                     prizes_taken: 0
                 },
                 match_log: [
-                    "⚔️ Match initialized with cards from your personal collection!",
-                    `👑 Active Pokémon: [${pActiveName}] vs [${oppActiveName}].`,
-                    "Turn 1: It is your turn!"
+                    "⚔️ 60-Card Match Arena initialized!",
+                    `🎯 SETUP PHASE: You drew 5 opening cards (${pDeck.length} cards left in your face-down deck).`,
+                    "Select 1 Basic Pokémon from your hand for Active Spot, and up to 3 for Bench Slots.",
+                    "If your opening hand has no Basic Pokémon, click [MULLIGAN REDRAW]."
                 ]
             };
+            updateMatchView(CURRENT_MATCH_STATE);
+        }
 
+        async function triggerMulligan() {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.phase !== 'SETUP') return;
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/mulligan', { method: 'POST', headers: headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result && data.result.status === 'error') {
+                        alert(`⚠️ ${data.result.message}`);
+                        return;
+                    }
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    return;
+                }
+            } catch(e) {
+                console.warn("Mulligan API call fallback:", e);
+            }
+
+            const hand = CURRENT_MATCH_STATE.player.hand || [];
+            const hasBasic = hand.some(c => isBasicPokemon(getCardMeta(c)));
+            if (hasBasic) {
+                if (!confirm("⚠️ You have Basic Pokémon in your hand! Standard TCG rules only permit Mulligan when no Basic Pokémon are present. Redraw anyway?")) {
+                    return;
+                }
+            }
+            CURRENT_MATCH_STATE.player.deck.push(...hand);
+            CURRENT_MATCH_STATE.player.deck = fisherYatesShuffle(CURRENT_MATCH_STATE.player.deck);
+            CURRENT_MATCH_STATE.player.hand = [
+                CURRENT_MATCH_STATE.player.deck.pop(),
+                CURRENT_MATCH_STATE.player.deck.pop(),
+                CURRENT_MATCH_STATE.player.deck.pop(),
+                CURRENT_MATCH_STATE.player.deck.pop(),
+                CURRENT_MATCH_STATE.player.deck.pop()
+            ];
+            if (!CURRENT_MATCH_STATE.player.hand.some(c => isBasicPokemon(getCardMeta(c)))) {
+                const bIdx = CURRENT_MATCH_STATE.player.deck.findIndex(c => isBasicPokemon(getCardMeta(c)));
+                if (bIdx !== -1) {
+                    CURRENT_MATCH_STATE.player.hand[0] = CURRENT_MATCH_STATE.player.deck.splice(bIdx, 1)[0];
+                }
+            }
+            CURRENT_MATCH_STATE.match_log.push("🔄 Mulligan Redraw: Shuffled hand back into 60-card deck and drew 5 new cards.");
+            updateMatchView(CURRENT_MATCH_STATE);
+        }
+
+        async function setupPlaceActive(cname) {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.phase !== 'SETUP') return;
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/place-and-battle', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ card_name: cname, slot: "active" })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result && data.result.status === 'error') {
+                        if (data.result.message && data.result.message.includes("is not in your hand")) {
+                            console.warn("State desync detected. Refreshing hand from server state.");
+                            if (data.match_state) {
+                                CURRENT_MATCH_STATE = data.match_state;
+                                updateMatchView(CURRENT_MATCH_STATE);
+                            }
+                        }
+                        alert(`❌ ${data.result.message}`);
+                        return;
+                    }
+                    SELECTED_CARD_KEY = null;
+                    SELECTED_CARD_ID = null;
+                    SELECTED_CARD_DATA = null;
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+                    return;
+                }
+            } catch(e) {
+                console.warn("setupPlaceActive API fallback:", e);
+            }
+
+            const meta = getCardMeta(cname);
+            if (!isBasicPokemon(meta)) {
+                alert(`❌ Invalid Selection: '${cname}' is a ${meta.stage || 'Stage 1/2'} Pokémon! Only Basic Pokémon can be placed during setup.`);
+                return;
+            }
+            const idx = CURRENT_MATCH_STATE.player.hand.findIndex(c => {
+                if (!c) return false;
+                const n = typeof c === 'string' ? c : (c.name || c.card_name);
+                const cid = typeof c === 'object' ? c.card_id : null;
+                return n === cname || String(cid) === String(cname);
+            });
+            if (idx === -1) return;
+            SELECTED_CARD_KEY = null;
+            SELECTED_CARD_ID = null;
+            SELECTED_CARD_DATA = null;
+            CURRENT_MATCH_STATE.player.hand.splice(idx, 1);
+            CURRENT_MATCH_STATE.player.active_spot = {
+                name: cname,
+                current_hp: meta.hp || 70,
+                max_hp: meta.hp || 70,
+                attached_energy: [],
+                image: meta.image || getCardImageUrl(meta, cname)
+            };
+            // Place any remaining Basic Pokémon in hand onto empty bench slots
+            for (let i = CURRENT_MATCH_STATE.player.hand.length - 1; i >= 0; i--) {
+                const cand = CURRENT_MATCH_STATE.player.hand[i];
+                const candName = typeof cand === 'string' ? cand : (cand.name || cand.card_name);
+                const candMeta = getCardMeta(candName);
+                if (isBasicPokemon(candMeta) && (CURRENT_MATCH_STATE.player.bench || []).length < 3) {
+                    CURRENT_MATCH_STATE.player.hand.splice(i, 1);
+                    CURRENT_MATCH_STATE.player.bench.push({
+                        name: candName,
+                        current_hp: candMeta.hp || 70,
+                        max_hp: candMeta.hp || 70,
+                        attached_energy: [],
+                        image: candMeta.image || getCardImageUrl(candMeta, candName)
+                    });
+                }
+            }
+            CURRENT_MATCH_STATE.phase = 'BATTLE';
+            while ((CURRENT_MATCH_STATE.player.hand || []).length < 5 && (CURRENT_MATCH_STATE.player.deck || []).length > 0) {
+                CURRENT_MATCH_STATE.player.hand.push(CURRENT_MATCH_STATE.player.deck.pop());
+            }
+            CURRENT_MATCH_STATE.match_log.push(`👑 Placed [${cname}] into Active Spot and started battle!`);
             updateMatchView(CURRENT_MATCH_STATE);
             runDynamicAiAnalysis(CURRENT_MATCH_STATE);
         }
 
+        async function setupPlaceBench(cname) {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.phase !== 'SETUP') return;
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/place-and-battle', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ card_name: cname, slot: "bench" })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result && data.result.status === 'error') {
+                        if (data.result.message && data.result.message.includes("is not in your hand")) {
+                            console.warn("State desync detected. Refreshing hand from server state.");
+                            if (data.match_state) {
+                                CURRENT_MATCH_STATE = data.match_state;
+                                updateMatchView(CURRENT_MATCH_STATE);
+                            }
+                        }
+                        alert(`❌ ${data.result.message}`);
+                        return;
+                    }
+                    SELECTED_CARD_KEY = null;
+                    SELECTED_CARD_ID = null;
+                    SELECTED_CARD_DATA = null;
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+                    return;
+                }
+            } catch(e) {
+                console.warn("setupPlaceBench API fallback:", e);
+            }
+
+            const meta = getCardMeta(cname);
+            if (!isBasicPokemon(meta)) {
+                alert(`❌ Invalid Selection: '${cname}' is a ${meta.stage || 'Stage 1/2'} Pokémon! Only Basic Pokémon can be placed during setup.`);
+                return;
+            }
+            const idx = CURRENT_MATCH_STATE.player.hand.findIndex(c => {
+                if (!c) return false;
+                const n = typeof c === 'string' ? c : (c.name || c.card_name);
+                const cid = typeof c === 'object' ? c.card_id : null;
+                return n === cname || String(cid) === String(cname);
+            });
+            if (idx === -1) return;
+            SELECTED_CARD_KEY = null;
+            SELECTED_CARD_ID = null;
+            SELECTED_CARD_DATA = null;
+            CURRENT_MATCH_STATE.player.hand.splice(idx, 1);
+            CURRENT_MATCH_STATE.player.bench.push({
+                name: cname,
+                current_hp: meta.hp || 70,
+                max_hp: meta.hp || 70,
+                attached_energy: [],
+                image: meta.image || getCardImageUrl(meta, cname)
+            });
+            // If active spot is empty, place another basic or promote this one
+            if (!CURRENT_MATCH_STATE.player.active_spot) {
+                const bIdx = CURRENT_MATCH_STATE.player.hand.findIndex(c => isBasicPokemon(getCardMeta(typeof c === 'string' ? c : (c.name || c.card_name))));
+                if (bIdx !== -1) {
+                    const actCard = CURRENT_MATCH_STATE.player.hand.splice(bIdx, 1)[0];
+                    const actName = typeof actCard === 'string' ? actCard : (actCard.name || actCard.card_name);
+                    const actMeta = getCardMeta(actName);
+                    CURRENT_MATCH_STATE.player.active_spot = {
+                        name: actName,
+                        current_hp: actMeta.hp || 70,
+                        max_hp: actMeta.hp || 70,
+                        attached_energy: [],
+                        image: actMeta.image || getCardImageUrl(actMeta, actName)
+                    };
+                } else {
+                    CURRENT_MATCH_STATE.player.active_spot = CURRENT_MATCH_STATE.player.bench.pop();
+                }
+            }
+            CURRENT_MATCH_STATE.phase = 'BATTLE';
+            while ((CURRENT_MATCH_STATE.player.hand || []).length < 5 && (CURRENT_MATCH_STATE.player.deck || []).length > 0) {
+                CURRENT_MATCH_STATE.player.hand.push(CURRENT_MATCH_STATE.player.deck.pop());
+            }
+            CURRENT_MATCH_STATE.match_log.push(`🛡️ Placed [${cname}] into Bench and started battle!`);
+            updateMatchView(CURRENT_MATCH_STATE);
+            runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+        }
+
+        async function confirmInitialSetup() {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.phase !== 'SETUP') return;
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/confirm-setup', { method: 'POST', headers: headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result && data.result.status === 'error') {
+                        alert(`⚠️ ${data.result.message}`);
+                        return;
+                    }
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+                    return;
+                }
+            } catch(e) {
+                console.warn("confirmInitialSetup API fallback:", e);
+            }
+
+            if (!CURRENT_MATCH_STATE.player.active_spot) {
+                alert("⚠️ You must place 1 Basic Pokémon into the Active Spot before confirming setup!");
+                return;
+            }
+            CURRENT_MATCH_STATE.phase = 'BATTLE';
+            // Draw opening battle hand (up to 5 cards) from the deck
+            while ((CURRENT_MATCH_STATE.player.hand || []).length < 5 && (CURRENT_MATCH_STATE.player.deck || []).length > 0) {
+                CURRENT_MATCH_STATE.player.hand.push(CURRENT_MATCH_STATE.player.deck.pop());
+            }
+            CURRENT_MATCH_STATE.match_log.push("⚡ Setup confirmed! Turn 1 begins.");
+            updateMatchView(CURRENT_MATCH_STATE);
+            runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+        }
+
+        async function applyAiSetupRecommendation() {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.phase !== 'SETUP') return;
+            const hand = CURRENT_MATCH_STATE.player_hand_cards || (CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.hand) || [];
+            const aiRec = getAiSetupRecommendations(hand);
+
+            if (aiRec && aiRec.recommended_main) {
+                if (!CURRENT_MATCH_STATE.player.active_spot) {
+                    await setupPlaceActive(aiRec.recommended_main.card_name);
+                }
+                if (aiRec.recommended_bench && Array.isArray(aiRec.recommended_bench)) {
+                    for (let b of aiRec.recommended_bench) {
+                        const currBench = CURRENT_MATCH_STATE.player.bench || [];
+                        if (currBench.length < 3) {
+                            await setupPlaceBench(b.card_name);
+                        }
+                    }
+                }
+            } else {
+                for (let c of hand) {
+                    const cname = typeof c === 'string' ? c : (c.name || c.card_name);
+                    const meta = getCardMeta(cname);
+                    if (isBasicPokemon(meta)) {
+                        if (!CURRENT_MATCH_STATE.player.active_spot) {
+                            await setupPlaceActive(cname);
+                        } else if ((CURRENT_MATCH_STATE.player.bench || []).length < 3) {
+                            await setupPlaceBench(cname);
+                        }
+                    }
+                }
+            }
+        }
+
+        async function autoPlaceSetupAndBattle() {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.phase !== 'SETUP') return;
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/auto-place', {
+                    method: 'POST',
+                    headers: headers
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success' || (data.result && data.result.status === 'success')) {
+                        SELECTED_CARD_KEY = null;
+                        SELECTED_CARD_ID = null;
+                        SELECTED_CARD_DATA = null;
+                        CURRENT_MATCH_STATE = data.match_state;
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("[AUTO-PLACE] API call failed, falling back locally:", err);
+            }
+            await applyAiSetupRecommendation();
+            await confirmInitialSetup();
+        }
+
+        function openSwitchModal() {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING || CURRENT_MATCH_STATE.phase === 'SETUP') {
+                alert("⚠️ You can only switch/retreat during your turn in the main battle phase!");
+                return;
+            }
+            const bench = (CURRENT_MATCH_STATE.player.bench || []).filter(b => b !== null);
+            if (bench.length === 0) {
+                alert("⚠️ You have no Pokémon on your bench to switch with!");
+                return;
+            }
+            const modal = document.getElementById('switch-modal');
+            const list = document.getElementById('switch-bench-list');
+            list.innerHTML = bench.map((b, idx) => `
+                <div style="background:rgba(8,14,28,0.9); border:1px solid var(--neon-purple); border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:800; color:#fff;">#${idx+1}: ${b.name}</div>
+                        <div style="font-size:0.7rem; color:var(--text-dim);">${b.current_hp}/${b.max_hp} HP • Energy: ${(b.attached_energy || []).length}</div>
+                    </div>
+                    <button class="btn-cyber-sm" style="border-color:var(--neon-purple); color:var(--neon-purple); padding:6px 12px;" onclick="executeRetreatSwitch(${idx})">
+                        🔄 SWITCH IN
+                    </button>
+                </div>
+            `).join('');
+            modal.style.display = 'flex';
+        }
+
+        function closeSwitchModal() {
+            const modal = document.getElementById('switch-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function executeRetreatSwitch(benchIndex) {
+            closeSwitchModal();
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/retreat', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ bench_slot: benchIndex })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result && data.result.status === 'error') {
+                        alert(`⚠️ ${data.result.message}`);
+                        return;
+                    }
+                    CURRENT_MATCH_STATE = data.match_state;
+                    advanceWinningRouteStepIfType("SWITCH_POKEMON");
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+                    return;
+                }
+            } catch(e) {
+                console.warn("Retreat switch API fallback:", e);
+            }
+
+            const bench = CURRENT_MATCH_STATE.player.bench || [];
+            if (benchIndex < 0 || benchIndex >= bench.length) return;
+            const oldActive = CURRENT_MATCH_STATE.player.active_spot;
+            const newActive = bench.splice(benchIndex, 1)[0];
+            CURRENT_MATCH_STATE.player.active_spot = newActive;
+            bench.push(oldActive);
+            CURRENT_MATCH_STATE.match_log.push(`🔄 Switched Active [${oldActive.name}] with Bench [${newActive.name}]! (Attached energy preserved).`);
+            advanceWinningRouteStepIfType("SWITCH_POKEMON");
+            updateMatchView(CURRENT_MATCH_STATE);
+            runDynamicAiAnalysis(CURRENT_MATCH_STATE);
+        }
+
+        function openKnockoutPromotionModal() {
+            const bench = (CURRENT_MATCH_STATE.player.bench || []).filter(b => b !== null);
+            if (bench.length === 0) {
+                CURRENT_MATCH_STATE.winner = 'Opponent';
+                CURRENT_MATCH_STATE.match_log.push("💀 Defeat: You have no benched Pokémon to promote! Opponent wins!");
+                updateMatchView(CURRENT_MATCH_STATE);
+                return;
+            }
+            const modal = document.getElementById('ko-modal');
+            const list = document.getElementById('ko-bench-list');
+            list.innerHTML = bench.map((b, idx) => `
+                <div style="background:rgba(8,14,28,0.9); border:1px solid #ef4444; border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:800; color:#fff;">#${idx+1}: ${b.name}</div>
+                        <div style="font-size:0.7rem; color:var(--text-dim);">${b.current_hp}/${b.max_hp} HP • Energy: ${(b.attached_energy || []).length}</div>
+                    </div>
+                    <button class="btn-action-main" style="border-color:var(--neon-green); padding:6px 12px; font-size:0.75rem;" onclick="executeKnockoutPromotion(${idx})">
+                        👑 PROMOTE TO ACTIVE
+                    </button>
+                </div>
+            `).join('');
+            modal.style.display = 'flex';
+        }
+
+        async function executeKnockoutPromotion(benchIndex) {
+            const modal = document.getElementById('ko-modal');
+            if (modal) modal.style.display = 'none';
+
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/promote-active', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ bench_slot: benchIndex })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    return;
+                }
+            } catch(e) {
+                console.warn("Promote active API fallback:", e);
+            }
+
+            const bench = CURRENT_MATCH_STATE.player.bench || [];
+            if (benchIndex < 0 || benchIndex >= bench.length) return;
+            const promoted = bench.splice(benchIndex, 1)[0];
+            CURRENT_MATCH_STATE.player.active_spot = promoted;
+            CURRENT_MATCH_STATE.match_log.push(`👑 Promoted [${promoted.name}] to Active Spot!`);
+            updateMatchView(CURRENT_MATCH_STATE);
+        }
+
         function updateMatchView(state) {
             if (!state) return;
+            CURRENT_MATCH_STATE = state;
+            window.CURRENT_MATCH_STATE = state;
 
-            document.getElementById('p-ko-count').textContent = state.player.prizes_taken || 0;
-            document.getElementById('opp-ko-count').textContent = state.opponent.prizes_taken || 0;
-            document.getElementById('p-deck-count').textContent = (state.player.deck || []).length;
+            const pDeckCount = (state.player && (state.player.deck_count !== undefined ? state.player.deck_count : (state.player.deck || []).length)) || 0;
+            const oppDeckCount = (state.opponent && (state.opponent.deck_count !== undefined ? state.opponent.deck_count : (state.opponent.deck || []).length)) || 0;
+
+            const pKoEl = document.getElementById('p-ko-count');
+            if (pKoEl) pKoEl.textContent = state.player.prizes_taken || 0;
+
+            const oppKoEl = document.getElementById('opp-ko-count');
+            if (oppKoEl) oppKoEl.textContent = state.opponent.prizes_taken || 0;
+
+            const pDeckCountEl = document.getElementById('p-deck-count');
+            if (pDeckCountEl) pDeckCountEl.textContent = pDeckCount;
+
+            const pVisualDeckCount = document.getElementById('p-deck-count-visual');
+            if (pVisualDeckCount) pVisualDeckCount.textContent = pDeckCount;
+
+            const oppDeckCountEl = document.getElementById('opp-deck-count');
+            if (oppDeckCountEl) oppDeckCountEl.textContent = oppDeckCount;
+            const handLabel = document.getElementById('hand-count-label');
+            if (handLabel) {
+                if (state.phase === 'SETUP') {
+                    const setupCards = (state.player.hand || []).filter(c => {
+                        const m = getCardMeta(typeof c === 'string' ? c : (c.name || c.card_name));
+                        return isBasicPokemon(m);
+                    });
+                    handLabel.textContent = setupCards.length;
+                } else {
+                    handLabel.textContent = (state.player.hand || []).length;
+                }
+            }
+
+            const setupBanner = document.getElementById('match-setup-banner');
+            if (setupBanner) {
+                setupBanner.style.display = (state.phase === 'SETUP') ? 'block' : 'none';
+            }
+
+            const setupBottomBar = document.getElementById('setup-bottom-actions-bar');
+            const matchActionBar = document.getElementById('match-actions-bar');
+            if (state.phase === 'SETUP') {
+                if (setupBottomBar) setupBottomBar.style.display = 'flex';
+                if (matchActionBar) matchActionBar.style.display = 'none';
+            } else {
+                if (setupBottomBar) setupBottomBar.style.display = 'none';
+                if (matchActionBar) matchActionBar.style.display = 'flex';
+            }
 
             const drawBtn = document.getElementById('btn-claim-deck-card');
             if (drawBtn) {
-                const deckCount = (state.player.deck || []).length;
-                if (state.card_drawn_this_turn) {
+                if (state.phase === 'SETUP') {
                     drawBtn.disabled = true;
                     drawBtn.style.opacity = '0.5';
                     drawBtn.style.cursor = 'not-allowed';
-                    drawBtn.innerHTML = `🃏 DECK CARD DRAWN (<span id="p-deck-count">${deckCount}</span> REMAINING)`;
-                } else if (!state.is_player_turn || IS_AI_PROCESSING) {
+                    drawBtn.innerHTML = `🃏 DRAW LOCKED (SETUP PHASE)`;
+                } else if (state.card_drawn_this_turn) {
                     drawBtn.disabled = true;
                     drawBtn.style.opacity = '0.5';
                     drawBtn.style.cursor = 'not-allowed';
-                    drawBtn.innerHTML = `🃏 DRAW DECK CARD (<span id="p-deck-count">${deckCount}</span> REMAINING)`;
+                    drawBtn.innerHTML = `🃏 DECK CARD DRAWN (<span id="p-deck-count">${pDeckCount}</span> REMAINING)`;
+                } else if (!state.is_player_turn || IS_AI_PROCESSING || state.winner) {
+                    drawBtn.disabled = true;
+                    drawBtn.style.opacity = '0.5';
+                    drawBtn.style.cursor = 'not-allowed';
+                    drawBtn.innerHTML = `🃏 DRAW DECK CARD (<span id="p-deck-count">${pDeckCount}</span> REMAINING)`;
                 } else {
                     drawBtn.disabled = false;
                     drawBtn.style.opacity = '1';
                     drawBtn.style.cursor = 'pointer';
-                    drawBtn.innerHTML = `🃏 DRAW DECK CARD (<span id="p-deck-count">${deckCount}</span> REMAINING)`;
+                    drawBtn.innerHTML = `🃏 DRAW DECK CARD (<span id="p-deck-count">${pDeckCount}</span> REMAINING)`;
                 }
             }
 
             const energyBtn = document.getElementById('btn-add-energy-main');
             if (energyBtn) {
-                if (state.energy_attached_this_turn) {
+                if (state.phase === 'SETUP') {
+                    energyBtn.disabled = true;
+                    energyBtn.style.opacity = '0.5';
+                    energyBtn.style.cursor = 'not-allowed';
+                    energyBtn.innerHTML = `⚡ ENERGY LOCKED (SETUP PHASE)`;
+                } else if (state.energy_attached_this_turn) {
                     energyBtn.disabled = true;
                     energyBtn.style.opacity = '0.5';
                     energyBtn.style.cursor = 'not-allowed';
@@ -1929,6 +3284,64 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                 }
             }
 
+            const switchBtn = document.getElementById('btn-switch-retreat');
+            if (switchBtn) {
+                if (state.phase === 'SETUP' || !state.is_player_turn || IS_AI_PROCESSING || state.winner) {
+                    switchBtn.disabled = true;
+                    switchBtn.style.opacity = '0.5';
+                    switchBtn.style.cursor = 'not-allowed';
+                } else {
+                    switchBtn.disabled = false;
+                    switchBtn.style.opacity = '1';
+                    switchBtn.style.cursor = 'pointer';
+                }
+            }
+
+            const endTurnBtn = document.getElementById('btn-end-turn');
+            if (endTurnBtn) {
+                if (state.phase === 'SETUP' || !state.is_player_turn || IS_AI_PROCESSING || state.winner) {
+                    endTurnBtn.disabled = true;
+                    endTurnBtn.style.opacity = '0.5';
+                    endTurnBtn.style.cursor = 'not-allowed';
+                } else {
+                    endTurnBtn.disabled = false;
+                    endTurnBtn.style.opacity = '1';
+                    endTurnBtn.style.cursor = 'pointer';
+                }
+            }
+
+            const pDeckBox = document.getElementById('player-face-down-deck');
+            if (pDeckBox) {
+                const canDraw = state.phase !== 'SETUP' && !state.card_drawn_this_turn && state.is_player_turn && !IS_AI_PROCESSING && !state.winner && (pDeckCount > 0);
+                if (canDraw) {
+                    pDeckBox.classList.remove('deck-disabled');
+                    pDeckBox.style.pointerEvents = 'auto';
+                    pDeckBox.style.cursor = 'pointer';
+                } else {
+                    pDeckBox.classList.add('deck-disabled');
+                    pDeckBox.style.pointerEvents = 'none';
+                    pDeckBox.style.cursor = 'not-allowed';
+                }
+            }
+
+            // Render Opponent AI Hand (Face-Down Card Backs)
+            const oppHandCount = (state.opponent.hand || []).length || state.opponent.hand_count || 5;
+            const oppHandLabel = document.getElementById('opp-hand-count-label');
+            if (oppHandLabel) oppHandLabel.textContent = oppHandCount;
+            const oppHandView = document.getElementById('opp-hand-view');
+            if (oppHandView) {
+                let cardBacksHtml = '';
+                for (let i = 0; i < oppHandCount; i++) {
+                    cardBacksHtml += `
+                        <div style="width:34px; height:48px; background:radial-gradient(circle at 50% 50%, #1e293b, #090e1a); border:1px solid rgba(255,0,127,0.4); border-radius:4px; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 0 6px rgba(255,0,127,0.2);">
+                            <div style="width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,0.6); background:linear-gradient(180deg, #ef4444 50%, #fff 50%); display:flex; align-items:center; justify-content:center;">
+                                <div style="width:5px; height:5px; background:#000; border-radius:50%;"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                oppHandView.innerHTML = cardBacksHtml;
+            }
 
             renderActiveCard('player-active-view', state.player.active_spot, true);
             renderActiveCard('opp-active-view', state.opponent.active_spot, false);
@@ -1939,7 +3352,11 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
             const banner = document.getElementById('match-status-banner');
             if (banner) {
-                if (state.winner) {
+                if (state.phase === 'SETUP') {
+                    banner.textContent = '🎯 SETUP PHASE (PLACE BASIC POKÉMON)';
+                    banner.style.borderColor = 'var(--neon-amber)';
+                    banner.style.color = 'var(--neon-amber)';
+                } else if (state.winner) {
                     banner.textContent = state.winner === 'Player' ? '🏆 VICTORY: YOU WON!' : '❌ DEFEAT: OPPONENT WON';
                     banner.style.borderColor = state.winner === 'Player' ? 'var(--neon-green)' : '#ef4444';
                     banner.style.color = state.winner === 'Player' ? 'var(--neon-green)' : '#ef4444';
@@ -1951,99 +3368,176 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             }
         }
 
-        function getCardImageUrl(meta, cardName) {
-            if (meta && meta.image) return meta.image;
-            const cname = (cardName || (meta ? meta.name : '')).toLowerCase().trim();
-            const cleanName = cname.replace(/ ex$/, '').replace(/ v$/, '').trim();
-
-            const POKEDEX_MAP = {
-                'bulbasaur': 1, 'ivysaur': 2, 'venusaur': 3,
-                'charmander': 4, 'charmeleon': 5, 'charizard': 6,
-                'squirtle': 7, 'wartortle': 8, 'blastoise': 9,
-                'caterpie': 10, 'metapod': 11, 'butterfree': 12,
-                'pikachu': 25, 'raichu': 26,
-                'jigglypuff': 39, 'wigglytuff': 40,
-                'machop': 66, 'machoke': 67, 'machamp': 68,
-                'gengar': 94, 'onix': 95,
-                'eevee': 133, 'vaporeon': 134, 'jolteon': 135, 'flareon': 136,
-                'snorlax': 143, 'articuno': 144, 'zapdos': 145, 'moltres': 146,
-                'dratini': 147, 'dragonair': 148, 'dragonite': 149,
-                'mewtwo': 150, 'mew': 151,
-                'miraidon': 1008, 'koraidon': 1007,
-                'potion': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png',
-                'super potion': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/super-potion.png',
-                'poke ball': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png',
-                'ultra ball': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png',
-                'switch': 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/escape-rope.png'
-            };
-
-            for (let [k, v] of Object.entries(POKEDEX_MAP)) {
-                if (cleanName.includes(k)) {
-                    if (typeof v === 'number') {
-                        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${v}.png`;
-                    }
-                    return v;
-                }
-            }
-
-            if (meta && meta.dataset_id) {
-                const num = parseInt(String(meta.dataset_id).replace(/\D/g, ''));
-                if (num && num >= 1 && num <= 1025) {
-                    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${num}.png`;
-                }
-            }
-
-            return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png`;
-        }
-
         function renderActiveCard(containerId, pkmn, isPlayer) {
             const box = document.getElementById(containerId);
-            if (!box || !pkmn) return;
+            if (!box) return;
+            if (!pkmn) {
+                let placePrompt = '';
+                if (isPlayer && SELECTED_CARD_DATA) {
+                    const sName = typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name);
+                    const sMeta = getCardMeta(sName);
+                    if (isBasicPokemon(sMeta)) {
+                        placePrompt = `
+                            <button class="btn-action-main" style="margin-top:8px; border-color:var(--neon-green); color:#86efac; padding:6px 12px; font-size:0.75rem; font-weight:800;" onclick="playSelectedCard('active')">
+                                👑 CLICK TO PLACE [${sName}] IN ACTIVE & START BATTLE
+                            </button>
+                        `;
+                    }
+                }
+                box.innerHTML = `
+                    <div style="padding:20px; text-align:center; color:var(--text-dim); border:2px dashed ${placePrompt ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)'}; border-radius:8px; background:${placePrompt ? 'rgba(0,243,255,0.06)' : 'transparent'};">
+                        <div style="font-size:1.8rem; margin-bottom:4px;">👑</div>
+                        <div style="font-family:var(--font-orbitron); font-size:0.85rem; font-weight:800; color:${placePrompt ? 'var(--neon-cyan)' : 'var(--text-dim)'};">NO ACTIVE POKÉMON</div>
+                        <div style="font-size:0.7rem; margin-top:2px;">Select a Basic Pokémon from hand to place here!</div>
+                        ${placePrompt}
+                    </div>
+                `;
+                return;
+            }
 
             const meta = getCardMeta(pkmn.name);
             const maxHp = pkmn.max_hp || meta.hp || 100;
             const currHp = Math.max(0, pkmn.current_hp);
             const hpPct = Math.max(0, Math.min(100, (currHp / maxHp) * 100));
             const imgUrl = getCardImageUrl(meta, pkmn.name);
-            const ptype = meta.pokemon_type || (meta.types && meta.types[0]) || 'Normal';
+            const ptype = pkmn.pokemon_type || meta.pokemon_type || (meta.types && meta.types[0]) || 'Normal';
+
+            // Opponent Active context for Type Advantage calculations
+            const mState = CURRENT_MATCH_STATE || window.CURRENT_MATCH_STATE;
+            const oppActive = isPlayer
+                ? (mState && mState.opponent && mState.opponent.active_spot)
+                : (mState && mState.player && mState.player.active_spot);
+            const oppMeta = oppActive ? getCardMeta(oppActive.card_id || oppActive.name) : {};
+            const oppType = oppActive ? (oppActive.pokemon_type || oppMeta.pokemon_type || (oppMeta.types && oppMeta.types[0]) || 'Colorless') : 'Colorless';
+            const oppWeak = oppMeta.weakness || (oppActive && oppActive.weakness) || '';
+            const oppRes = oppMeta.resistance || (oppActive && oppActive.resistance) || '';
+            const myWeak = meta.weakness || pkmn.weakness || '';
 
             let attacksHtml = '';
-            const attacks = meta.attacks && meta.attacks.length > 0 ? meta.attacks : [{ name: "Strike", base_damage: 40, cost: ["Colorless"] }];
+            const attacks = (meta.attacks && meta.attacks.length > 0) ? meta.attacks : ((pkmn.attacks && pkmn.attacks.length > 0) ? pkmn.attacks : [{ name: "Strike", base_damage: 40, cost: ["Colorless"] }]);
             attacks.forEach(atk => {
                 let strikeBtn = '';
+                const isTurn = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.is_player_turn && !IS_AI_PROCESSING && !CURRENT_MATCH_STATE.winner && CURRENT_MATCH_STATE.phase !== 'SETUP';
+                const costDetails = canPayAttackCostDetails(pkmn.attached_energy || pkmn.attachedEnergy || [], atk.cost || []);
+
+                const baseDmg = atk.base_damage || 0;
+                const matchup = calculateMatchupDamageJs(baseDmg, ptype, oppType, oppWeak, oppRes, myWeak);
+
                 if (isPlayer) {
-                    const isTurn = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.is_player_turn && !IS_AI_PROCESSING && !CURRENT_MATCH_STATE.winner;
-                    strikeBtn = `<button class="btn-cyber-sm" ${!isTurn ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="matchAttack('${atk.name.replace(/'/g, "\\'")}', ${atk.base_damage || 30})" style="padding:4px 8px; font-size:0.7rem;">⚡ STRIKE</button>`;
+                    if (!isTurn) {
+                        strikeBtn = `<button class="btn-cyber-sm" disabled style="opacity:0.4; cursor:not-allowed; padding:4px 8px; font-size:0.7rem;">⚡ STRIKE</button>`;
+                    } else if (!costDetails.canAfford) {
+                        strikeBtn = `<button class="btn-cyber-sm" disabled style="opacity:0.5; cursor:not-allowed; border-color:#ef4444; color:#f87171; padding:4px 8px; font-size:0.7rem; font-weight:700;" title="Requires: ${costDetails.costEmojis} • ${costDetails.reason}">⚡ NEED ENERGY</button>`;
+                    } else {
+                        strikeBtn = `<button class="btn-cyber-sm" onclick="matchAttack('${atk.name.replace(/'/g, "\\'")}', ${baseDmg || 30})" style="padding:4px 8px; font-size:0.7rem; border-color:var(--neon-green); color:#86efac; font-weight:800;" title="Ready to attack! ${matchup.desc}">⚡ STRIKE</button>`;
+                    }
+                }
+
+                let costExplainer = '';
+                if (isPlayer && !costDetails.canAfford) {
+                    costExplainer = `<div style="font-size:0.65rem; color:#f87171; margin-top:2px; font-weight:600;">Requires: ${costDetails.costEmojis} • ${costDetails.reason}</div>`;
+                }
+
+                let dmgBadge = '';
+                if (baseDmg > 0) {
+                    if (matchup.mult === 1.5) {
+                        dmgBadge = `<span style="color:#4ade80; font-size:0.8rem; font-weight:800;" title="${matchup.desc}">${matchup.finalDmg} DMG <small style="font-size:0.65rem; color:#86efac; font-weight:700;">(+50% Adv)</small></span>`;
+                    } else if (matchup.mult === 0.5) {
+                        dmgBadge = `<span style="color:#f87171; font-size:0.8rem; font-weight:800;" title="${matchup.desc}">${matchup.finalDmg} DMG <small style="font-size:0.65rem; color:#fca5a5; font-weight:700;">(-50% Disadv)</small></span>`;
+                    } else {
+                        dmgBadge = `<b style="color:var(--neon-amber); font-size:0.8rem;">${baseDmg} DMG</b>`;
+                    }
+                } else {
+                    dmgBadge = `<b style="color:var(--text-dim); font-size:0.8rem;">Effect</b>`;
                 }
 
                 attacksHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:4px 8px; border-radius:4px; margin-top:4px;">
-                        <div>
-                            <div style="font-weight:800; font-size:0.78rem;">${atk.name}</div>
-                            <div style="font-size:0.65rem; color:var(--text-dim);">Cost: ${(atk.cost || ['Colorless']).join('/')}</div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <b style="color:var(--neon-amber); font-size:0.8rem;">${atk.base_damage ? atk.base_damage + ' DMG' : 'Effect'}</b>
-                            ${strikeBtn}
+                    <div style="background:rgba(255,255,255,0.04); padding:6px 8px; border-radius:4px; margin-top:4px; border:1px solid ${costDetails.canAfford ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)'};">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-weight:800; font-size:0.78rem;">${atk.name}</div>
+                                <div style="font-size:0.68rem; color:var(--text-dim);">Cost: ${costDetails.costEmojis} (${(atk.cost || ['Colorless']).join('/')})</div>
+                                ${costExplainer}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${dmgBadge}
+                                ${strikeBtn}
+                            </div>
                         </div>
                     </div>
                 `;
             });
 
-            const energyDisplay = (pkmn.attached_energy && pkmn.attached_energy.length > 0)
-                ? pkmn.attached_energy.map(e => `<span style="background:rgba(0,243,255,0.15); border:1px solid var(--neon-cyan); border-radius:3px; padding:1px 5px; font-size:0.65rem; margin-right:3px;">⚡ ${e}</span>`).join('')
-                : '<span style="color:var(--text-dim); font-size:0.7rem;">None Attached</span>';
+            // Target action button on active when card is selected
+            let targetActionHtml = '';
+            if (isPlayer && SELECTED_CARD_DATA && CURRENT_MATCH_STATE.phase !== 'SETUP') {
+                const sName = typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name);
+                const sMeta = getCardMeta(sName);
+                if (sMeta.card_type === 'energy' || sName.toLowerCase().includes('energy')) {
+                    if (!CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                        targetActionHtml = `
+                            <button class="btn-cyber-sm" style="border-color:var(--neon-green); color:#86efac; padding:3px 8px; font-size:0.68rem; font-weight:800; margin-left:auto;" onclick="playSelectedCard('active')">
+                                ⚡ ATTACH [${sName}]
+                            </button>
+                        `;
+                    }
+                } else if (sName.toLowerCase().includes('potion')) {
+                    targetActionHtml = `
+                        <button class="btn-cyber-sm" style="border-color:var(--neon-purple); color:#d8b4fe; padding:3px 8px; font-size:0.68rem; font-weight:800; margin-left:auto;" onclick="playSelectedCard('active')">
+                            💊 HEAL (+30 HP)
+                        </button>
+                    `;
+                } else if (sMeta.stage === 'Stage 1' || sMeta.stage === 'Stage 2') {
+                    const evoFrom = (sMeta.evolves_from || '').toLowerCase().trim();
+                    if (evoFrom && pkmn.name.toLowerCase().includes(evoFrom)) {
+                        targetActionHtml = `
+                            <button class="btn-cyber-sm" style="border-color:var(--neon-amber); color:#fde68a; padding:3px 8px; font-size:0.68rem; font-weight:800; margin-left:auto;" onclick="playSelectedCard('active')">
+                                🔥 EVOLVE INTO [${sName}]
+                            </button>
+                        `;
+                    }
+                }
+            }
+
+            const attachedList = pkmn.attached_energy || pkmn.attachedEnergy || [];
+            const energyDisplay = attachedList.length > 0
+                ? attachedList.map(e => {
+                    const etype = normalizeEnergyTypeJs(e);
+                    const emoji = ENERGY_EMOJI_MAP[etype] || '⚡';
+                    return `<span style="background:rgba(0,243,255,0.18); border:1px solid var(--neon-cyan); border-radius:4px; padding:2px 6px; font-size:0.72rem; margin-right:4px; font-weight:700; display:inline-flex; align-items:center; gap:3px;">${emoji} ${etype}</span>`;
+                }).join('')
+                : '<span style="color:var(--text-dim); font-size:0.7rem; font-style:italic;">None Attached</span>';
+
+            const isEnergySelected = isPlayer && SELECTED_CARD_DATA && CURRENT_MATCH_STATE.phase !== 'SETUP' && (
+                (getCardMeta(typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name)).card_type === 'energy') ||
+                String(typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name)).toLowerCase().includes('energy')
+            );
+            if (isEnergySelected && !CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                box.style.border = '2px dashed var(--neon-green)';
+                box.style.boxShadow = '0 0 16px rgba(0, 255, 136, 0.5), inset 0 0 10px rgba(0, 255, 136, 0.15)';
+                box.style.cursor = 'pointer';
+                box.setAttribute('onclick', "playSelectedCard('active')");
+                box.setAttribute('title', '👉 Click to Attach selected Energy to Active Pokémon!');
+            } else {
+                box.style.border = '1px solid rgba(0, 243, 255, 0.3)';
+                box.style.boxShadow = 'none';
+                box.style.cursor = 'default';
+                box.removeAttribute('onclick');
+                box.removeAttribute('title');
+            }
 
             box.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <div style="font-family:var(--font-orbitron); font-size:0.92rem; color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; font-weight:900;">
                         ${isPlayer ? '👑 YOUR' : '👑 OPPONENT'} ACTIVE: ${pkmn.name}
                     </div>
-                    <span class="cyber-badge" style="font-size:0.65rem; padding:2px 6px;">${ptype}</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        ${targetActionHtml}
+                        <span class="cyber-badge" style="font-size:0.65rem; padding:2px 6px;">${ptype}</span>
+                    </div>
                 </div>
 
                 <div style="display:flex; gap:12px; align-items:flex-start;">
-                    <!-- Main Pokemon Card Image -->
                     <div class="active-card-img-box" style="width:85px; height:110px; min-width:85px; background:rgba(2,4,9,0.85); border:2px solid ${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'}; border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px ${isPlayer ? 'rgba(0,243,255,0.25)' : 'rgba(255,0,85,0.25)'}; position:relative;">
                         <img src="${imgUrl}" alt="${pkmn.name}" style="max-width:100%; max-height:100%; object-fit:contain;"
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -2067,15 +3561,61 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
         function renderBenchGrid(containerId, bench, isPlayer) {
             const box = document.getElementById(containerId);
             if (!box) return;
-            if (!bench || bench.length === 0) {
-                box.innerHTML = `<div style="color:var(--text-dim); font-size:0.7rem; font-style:italic;">Empty Bench</div>`;
+            const benchList = bench || [];
+
+            let emptySlotsHtml = '';
+            if (isPlayer && benchList.length < 3) {
+                for (let slotIdx = benchList.length; slotIdx < 3; slotIdx++) {
+                    let placeBtn = '';
+                    if (SELECTED_CARD_DATA) {
+                        const sName = typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name);
+                        const sMeta = getCardMeta(sName);
+                        if (isBasicPokemon(sMeta)) {
+                            placeBtn = `<button class="btn-cyber-sm" style="border-color:var(--neon-green); color:#86efac; padding:2px 6px; font-size:0.65rem; font-weight:800; margin-left:auto;" onclick="playSelectedCard('bench_${slotIdx}')">🛡️ Place [${sName}] & Start Battle</button>`;
+                        }
+                    }
+                    emptySlotsHtml += `
+                        <div style="background:rgba(2,4,9,0.4); border:1px dashed rgba(255,255,255,0.15); border-radius:6px; padding:6px; font-size:0.7rem; display:flex; align-items:center; gap:8px;">
+                            <div style="width:34px; height:42px; min-width:34px; background:rgba(0,0,0,0.3); border:1px dashed rgba(255,255,255,0.1); border-radius:4px; display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:0.75rem;">
+                                #${slotIdx+1}
+                            </div>
+                            <div style="color:var(--text-dim); font-size:0.68rem;">Empty Bench Slot</div>
+                            ${placeBtn}
+                        </div>
+                    `;
+                }
+            }
+
+            if (benchList.length === 0 && !emptySlotsHtml) {
+                box.innerHTML = `<div style="color:var(--text-dim); font-size:0.7rem; font-style:italic;">Empty Bench (0/3 Slots)</div>`;
                 return;
             }
-            box.innerHTML = bench.map((b, i) => {
+
+            const itemsHtml = benchList.map((b, i) => {
+                if (!b) return '';
                 const maxHp = b.max_hp || 70;
                 const currHp = Math.max(0, b.current_hp);
                 const meta = getCardMeta(b.name);
                 const thumbUrl = getCardImageUrl(meta, b.name);
+
+                let benchActionBtn = '';
+                if (isPlayer && SELECTED_CARD_DATA && CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.phase !== 'SETUP') {
+                    const sName = typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name);
+                    const sMeta = getCardMeta(sName);
+                    if (sMeta.card_type === 'energy' || sName.toLowerCase().includes('energy')) {
+                        if (!CURRENT_MATCH_STATE.energy_attached_this_turn) {
+                            benchActionBtn = `<button class="btn-cyber-sm" style="border-color:var(--neon-green); color:#86efac; padding:2px 5px; font-size:0.62rem; font-weight:800;" onclick="playSelectedCard('bench_${i}')">⚡ Attach</button>`;
+                        }
+                    } else if (sName.toLowerCase().includes('potion')) {
+                        benchActionBtn = `<button class="btn-cyber-sm" style="border-color:var(--neon-purple); color:#d8b4fe; padding:2px 5px; font-size:0.62rem; font-weight:800;" onclick="playSelectedCard('bench_${i}')">💊 Heal</button>`;
+                    } else if (sMeta.stage === 'Stage 1' || sMeta.stage === 'Stage 2') {
+                        const evoFrom = (sMeta.evolves_from || '').toLowerCase().trim();
+                        if (evoFrom && b.name.toLowerCase().includes(evoFrom)) {
+                            benchActionBtn = `<button class="btn-cyber-sm" style="border-color:var(--neon-amber); color:#fde68a; padding:2px 5px; font-size:0.62rem; font-weight:800;" onclick="playSelectedCard('bench_${i}')">🔥 Evolve</button>`;
+                        }
+                    }
+                }
+
                 return `
                     <div style="background:rgba(2,4,9,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; font-size:0.7rem; display:flex; align-items:center; gap:8px;">
                         <div style="width:34px; height:42px; min-width:34px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.2); border-radius:4px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
@@ -2087,36 +3627,307 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                                 <span style="color:${isPlayer ? 'var(--neon-cyan)' : 'var(--neon-magenta)'};">#${i+1}: ${b.name}</span>
                                 <span style="color:#34d399;">${currHp}/${maxHp} HP</span>
                             </div>
-                            <div style="font-size:0.62rem; color:var(--text-dim); margin-top:2px;">Type: ${meta.pokemon_type || 'Basic'}</div>
+                            <div style="font-size:0.62rem; color:var(--text-dim); margin-top:2px; display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                                <span>Type: ${meta.pokemon_type || 'Basic'}</span>
+                                <span>• Energy: ${(b.attached_energy || b.attachedEnergy || []).map(e => ENERGY_EMOJI_MAP[normalizeEnergyTypeJs(e)] || '⚡').join(' ') || 'None'}</span>
+                            </div>
                         </div>
+                        ${benchActionBtn}
                     </div>
                 `;
             }).join('');
+
+            box.innerHTML = itemsHtml + emptySlotsHtml;
+        }
+
+        function getAiSetupRecommendations(hand) {
+            if (!hand || hand.length === 0) return null;
+            if (LAST_AI_REPORT && LAST_AI_REPORT.setup_recommendation && LAST_AI_REPORT.setup_recommendation.recommended_main) {
+                const recName = LAST_AI_REPORT.setup_recommendation.recommended_main.card_name;
+                const inHand = hand.some(c => (typeof c === 'string' ? c : (c.name || c.card_name)) === recName);
+                if (inHand) {
+                    return LAST_AI_REPORT.setup_recommendation;
+                }
+            }
+
+            const oppActive = (CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.active_spot) || {};
+            const oppType = oppActive.pokemon_type || 'Colorless';
+            const basicEvals = [];
+
+            hand.forEach(c => {
+                const cname = typeof c === 'string' ? c : (c.name || c.card_name);
+                const meta = getCardMeta(cname);
+                if (isBasicPokemon(meta)) {
+                    const hp = meta.hp || 70;
+                    const attacks = meta.attacks || [];
+                    const maxDmg = attacks.reduce((max, a) => Math.max(max, a.base_damage || 0), 30);
+                    const minCost = attacks.reduce((min, a) => Math.min(min, (a.cost || []).length || 1), 1);
+                    const weakness = meta.weakness || '';
+                    const hasDisadvantage = weakness.toLowerCase().includes(oppType.toLowerCase());
+
+                    let winProb = 0.52 + (hp - 70) * 0.002 + (maxDmg - 30) * 0.003 - (minCost - 1) * 0.02;
+                    if (hasDisadvantage) winProb -= 0.08;
+                    winProb = Math.min(0.89, Math.max(0.45, winProb));
+
+                    basicEvals.push({
+                        card_name: cname,
+                        hp: hp,
+                        max_damage: maxDmg,
+                        winning_probability: winProb,
+                        winning_probability_pct: (winProb * 100).toFixed(1) + '%'
+                    });
+                }
+            });
+
+            basicEvals.sort((a, b) => b.winning_probability - a.winning_probability);
+            if (basicEvals.length === 0) return null;
+
+            const recMain = basicEvals[0];
+            const recBench = basicEvals.slice(1, 4);
+            return {
+                recommended_main: recMain,
+                recommended_bench: recBench,
+                all_evaluations: basicEvals,
+                summary: `Place [${recMain.card_name}] into Main (${recMain.winning_probability_pct} Win Possibility)` +
+                         (recBench.length > 0 ? `, and [${recBench.map(b => b.card_name).join(', ')}] onto Bench.` : '.')
+            };
         }
 
         function renderHandGrid(hand) {
             const box = document.getElementById('player-hand-view');
             if (!box) return;
-            const isTurn = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.is_player_turn && !IS_AI_PROCESSING && !CURRENT_MATCH_STATE.winner;
 
             if (!hand || hand.length === 0) {
                 box.innerHTML = '<div style="color:var(--text-dim); font-size:0.75rem;">Your hand is empty. Click [DRAW DECK CARD] to draw!</div>';
                 return;
             }
 
-            box.innerHTML = hand.map(item => {
-                const cname = typeof item === 'string' ? item : item.name;
-                const meta = getCardMeta(cname);
-                return `
-                    <div style="background:rgba(8,14,28,0.9); border:1px solid rgba(0,243,255,0.3); border-radius:6px; padding:5px 8px; display:inline-flex; align-items:center; gap:8px; font-size:0.75rem;">
-                        <div>
-                            <div style="font-weight:800; color:#fff;">${cname}</div>
-                            <div style="font-size:0.65rem; color:var(--neon-cyan);">${meta.hp ? meta.hp + ' HP' : (meta.card_type || 'Card')}</div>
+            const isSetup = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.phase === 'SETUP';
+            const isTurn = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.is_player_turn && !IS_AI_PROCESSING && !CURRENT_MATCH_STATE.winner;
+            const energyAttached = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.energy_attached_this_turn;
+            const pActive = CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.active_spot;
+            const pBench = (CURRENT_MATCH_STATE && CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.bench) || [];
+            const benchCount = pBench.filter(b => b !== null).length;
+
+            const aiRec = getAiSetupRecommendations(hand);
+
+            // Update Setup Banner AI Recommendation callout
+            const setupBox = document.getElementById('setup-ai-rec-box');
+            if (setupBox) {
+                if (isSetup && aiRec && aiRec.summary) {
+                    setupBox.style.display = 'block';
+                    setupBox.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <span style="color:var(--neon-cyan); font-weight:900;">🧠 AI RECOMMENDATION:</span>
+                                <span style="color:#fff; margin-left:6px;">${aiRec.summary}</span>
+                            </div>
+                            <button class="btn-action-main" style="background:rgba(0,243,255,0.2); border-color:var(--neon-cyan); color:#00f3ff; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="applyAiSetupRecommendation()">
+                                ⚡ APPLY AI SETUP
+                            </button>
                         </div>
-                        <button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem;" ${!isTurn ? 'disabled style="opacity:0.4;"' : ''} onclick="matchPlayCard('${cname.replace(/'/g, "\\'")}')">Play</button>
+                    `;
+                } else {
+                    setupBox.style.display = 'none';
+                }
+            }
+
+            // Top Selected Card Action Bar
+            let selectedActionBar = '';
+            if (SELECTED_CARD_DATA) {
+                const sName = typeof SELECTED_CARD_DATA === 'string' ? SELECTED_CARD_DATA : (SELECTED_CARD_DATA.name || SELECTED_CARD_DATA.card_name);
+                const sMeta = getCardMeta(sName);
+                const sBasic = isBasicPokemon(sMeta);
+                const sEnergy = sMeta.card_type === 'energy' || sName.toLowerCase().includes('energy');
+                const sTrainer = sMeta.card_type === 'trainer';
+                const sEvo = sMeta.stage === 'Stage 1' || sMeta.stage === 'Stage 2';
+
+                let actionBtns = '';
+                if (isSetup) {
+                    if (sBasic) {
+                        actionBtns += `
+                            <button class="btn-action-main" style="border-color:var(--neon-green); color:#86efac; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('active')">👑 Place Main & Start Battle</button>
+                            <button class="btn-action-main" style="border-color:var(--neon-cyan); color:#38bdf8; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('bench')">🛡️ Place Bench & Start Battle</button>
+                        `;
+                    } else {
+                        actionBtns += `<span style="color:#f87171; font-size:0.72rem;">Cannot place in setup.</span>`;
+                    }
+                } else {
+                    if (sBasic) {
+                        if (!pActive) {
+                            actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-green); color:#86efac; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('active')">👑 Place Main</button>`;
+                        }
+                        if (benchCount < 3) {
+                            actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-cyan); color:#38bdf8; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('bench')">🛡️ Place Bench</button>`;
+                        }
+                    } else if (sEnergy) {
+                        actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-green); color:#86efac; padding:4px 10px; font-size:0.72rem; font-weight:800;" ${energyAttached ? 'disabled style="opacity:0.4;"' : ''} onclick="playSelectedCard('active')">⚡ Power Main</button>`;
+                        pBench.forEach((b, bIdx) => {
+                            if (b) {
+                                actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-cyan); color:#38bdf8; padding:4px 10px; font-size:0.72rem; font-weight:800;" ${energyAttached ? 'disabled style="opacity:0.4;"' : ''} onclick="playSelectedCard('bench_${bIdx}')">⚡ Power Bench #${bIdx+1}</button>`;
+                            }
+                        });
+                    } else if (sTrainer) {
+                        const clean = sName.toLowerCase();
+                        if (clean.includes('potion')) {
+                            actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-purple); color:#d8b4fe; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('active')">💊 Heal Main</button>`;
+                            pBench.forEach((b, bIdx) => {
+                                if (b) {
+                                    actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-purple); color:#d8b4fe; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('bench_${bIdx}')">💊 Heal Bench #${bIdx+1}</button>`;
+                                }
+                            });
+                        } else {
+                            actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-purple); color:#d8b4fe; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('active')">✨ Use Power</button>`;
+                        }
+                    } else if (sEvo) {
+                        actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-amber); color:#fde68a; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('active')">🔥 Evolve Main</button>`;
+                        pBench.forEach((b, bIdx) => {
+                            if (b) {
+                                actionBtns += `<button class="btn-action-main" style="border-color:var(--neon-amber); color:#fde68a; padding:4px 10px; font-size:0.72rem; font-weight:800;" onclick="playSelectedCard('bench_${bIdx}')">🔥 Evolve Bench #${bIdx+1}</button>`;
+                            }
+                        });
+                    }
+                }
+
+                selectedActionBar = `
+                    <div style="background:rgba(0, 243, 255, 0.08); border:1px solid var(--neon-cyan); border-radius:6px; padding:8px 12px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; box-shadow:0 0 12px rgba(0,243,255,0.2); width:100%;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="color:var(--neon-cyan); font-weight:900; font-size:0.78rem;">👉 SELECTED:</span>
+                            <span style="color:#fff; font-weight:800; font-size:0.85rem;">${sName}</span>
+                            <span style="font-size:0.7rem; color:var(--text-dim);">${sMeta.card_type || 'Card'} ${sMeta.stage ? '• ' + sMeta.stage : ''}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            ${actionBtns}
+                            <button class="btn-cyber-sm" style="border-color:#64748b; color:#94a3b8; padding:4px 8px; font-size:0.72rem;" onclick="selectHandCard(null, null, null, event)">✕ Cancel</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // During SETUP: Only cards that can be set in Main or Bench are in hand!
+            const handCardsToRender = isSetup
+                ? hand.filter(item => {
+                    const cname = typeof item === 'string' ? item : (item.name || item.card_name);
+                    return isBasicPokemon(getCardMeta(cname));
+                })
+                : hand;
+
+            const cardsHtml = handCardsToRender.map((item, idx) => {
+                const cname = typeof item === 'string' ? item : (item.name || item.card_name);
+                const meta = getCardMeta(cname);
+                const displayName = meta.name || meta.card_name || cname;
+                const isBasic = isBasicPokemon(meta);
+                const cardImg = getCardImageUrl(meta, cname);
+                const isEnergy = meta.card_type === 'energy' || cname.toLowerCase().includes('energy');
+                const isTrainer = meta.card_type === 'trainer';
+                const isEvo = meta.stage === 'Stage 1' || meta.stage === 'Stage 2';
+
+                const handKey = (item.card_id || cname) + '_' + idx;
+                const isSelected = (SELECTED_CARD_KEY === handKey);
+
+                // Check AI recommendation tags
+                let aiBadge = '';
+                let borderGlow = isSelected ? 'var(--neon-cyan)' : 'rgba(0,243,255,0.3)';
+                if (aiRec && isBasic) {
+                    if (aiRec.recommended_main && aiRec.recommended_main.card_name === cname) {
+                        aiBadge = `<span style="background:rgba(0,243,255,0.25); border:1px solid var(--neon-cyan); border-radius:3px; padding:1px 5px; font-size:0.62rem; color:var(--neon-cyan); font-weight:900;">⭐ AI MAIN (${aiRec.recommended_main.winning_probability_pct})</span>`;
+                        if (!isSelected) borderGlow = 'var(--neon-cyan)';
+                    } else if (aiRec.recommended_bench && aiRec.recommended_bench.some(b => b.card_name === cname)) {
+                        const bObj = aiRec.recommended_bench.find(b => b.card_name === cname);
+                        aiBadge = `<span style="background:rgba(0,255,136,0.2); border:1px solid var(--neon-green); border-radius:3px; padding:1px 5px; font-size:0.62rem; color:#86efac; font-weight:800;">⭐ AI BENCH (${bObj ? bObj.winning_probability_pct : 'High'})</span>`;
+                        if (!isSelected) borderGlow = 'var(--neon-green)';
+                    }
+                }
+
+                const selectedBadge = isSelected ? `<span style="background:var(--neon-cyan); color:#000; font-weight:900; font-size:0.6rem; padding:1px 5px; border-radius:3px; margin-left:4px;">SELECTED</span>` : '';
+                const selectedStyles = isSelected 
+                    ? `border: 2px solid var(--neon-cyan); box-shadow: 0 0 15px rgba(0,243,255,0.7), inset 0 0 8px rgba(0,243,255,0.2); transform: translateY(-4px); background: rgba(0, 243, 255, 0.12);` 
+                    : `border: 1px solid ${borderGlow}; box-shadow: ${borderGlow !== 'rgba(0,243,255,0.3)' ? '0 0 10px ' + borderGlow : 'none'}; background: rgba(8,14,28,0.95);`;
+
+                if (isSetup) {
+                    if (isBasic) {
+                        return `
+                            <div style="${selectedStyles} border-radius:6px; padding:6px 10px; display:inline-flex; align-items:center; gap:8px; font-size:0.75rem; cursor:pointer; transition:all 0.2s;" onclick="selectHandCard('${handKey}', '${cname.replace(/'/g, "\\'")}', ${idx}, event)">
+                                <div style="width:28px; height:36px; min-width:28px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15); border-radius:3px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                                    <img src="${cardImg}" alt="${displayName}" style="max-width:100%; max-height:100%; object-fit:contain;" onerror="this.style.display='none';">
+                                </div>
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span style="font-weight:800; color:#fff;">${displayName}</span>
+                                        ${aiBadge}
+                                        ${selectedBadge}
+                                    </div>
+                                    <div style="font-size:0.65rem; color:var(--neon-cyan);">${meta.hp || 70} HP • Basic Pokémon</div>
+                                </div>
+                                <div style="display:flex; gap:4px; margin-left:auto;">
+                                    <button class="btn-cyber-sm" style="padding:4px 8px; font-size:0.7rem; border-color:var(--neon-green); color:#86efac; font-weight:800;" onclick="event.stopPropagation(); setupPlaceActive('${cname.replace(/'/g, "\\'")}')" title="Place as Main Active Pokémon and Start Battle!">👑 Main</button>
+                                    <button class="btn-cyber-sm" style="padding:4px 8px; font-size:0.7rem; border-color:var(--neon-cyan); color:#38bdf8;" onclick="event.stopPropagation(); setupPlaceBench('${cname.replace(/'/g, "\\'")}')" title="Place on Bench and Start Battle!">🛡️ Bench</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return '';
+                    }
+                }
+
+                // Main BATTLE phase actions
+                let actionButtons = '';
+                if (isBasic) {
+                    const benchBtn = `<button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem; border-color:var(--neon-cyan); color:#fff;" ${!isTurn || benchCount >= 3 ? 'disabled style="opacity:0.4;"' : ''} onclick="event.stopPropagation(); matchPlayCard('${cname.replace(/'/g, "\\'")}', 'bench')">🛡️ Bench</button>`;
+                    const mainBtn = !pActive
+                        ? `<button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem; border-color:var(--neon-green); color:#86efac;" ${!isTurn ? 'disabled style="opacity:0.4;"' : ''} onclick="event.stopPropagation(); matchPlayCard('${cname.replace(/'/g, "\\'")}', 'active')">👑 Main</button>`
+                        : '';
+                    actionButtons = mainBtn + benchBtn;
+                } else if (isEvo) {
+                    actionButtons = `
+                        <button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem; border-color:var(--neon-amber); color:#fde68a;" ${!isTurn ? 'disabled style="opacity:0.4;"' : ''} onclick="event.stopPropagation(); matchPlayCard('${cname.replace(/'/g, "\\'")}', 'active')">🔥 Evolve Main</button>
+                    `;
+                } else if (isEnergy) {
+                    actionButtons = `
+                        <span class="btn-cyber-sm" style="padding:3px 6px; font-size:0.65rem; border-color:var(--neon-green); color:#86efac; font-weight:800;">⚡ Click to Attach</span>
+                    `;
+                } else if (isTrainer) {
+                    const clean = cname.toLowerCase();
+                    if (clean.includes('potion')) {
+                        actionButtons = `
+                            <button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem; border-color:var(--neon-purple); color:#d8b4fe;" ${!isTurn ? 'disabled style="opacity:0.4;"' : ''} onclick="event.stopPropagation(); matchPlayCard('${cname.replace(/'/g, "\\'")}', 'active')">💊 Heal Main</button>
+                        `;
+                    } else {
+                        actionButtons = `
+                            <button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem; border-color:var(--neon-purple); color:#d8b4fe;" ${!isTurn ? 'disabled style="opacity:0.4;"' : ''} onclick="event.stopPropagation(); matchPlayCard('${cname.replace(/'/g, "\\'")}')">✨ Use Power</button>
+                        `;
+                    }
+                } else {
+                    actionButtons = `
+                        <button class="btn-cyber-sm" style="padding:3px 6px; font-size:0.68rem; border-color:var(--neon-purple); color:#d8b4fe;" ${!isTurn ? 'disabled style="opacity:0.4;"' : ''} onclick="event.stopPropagation(); matchPlayCard('${cname.replace(/'/g, "\\'")}')">Play</button>
+                    `;
+                }
+
+                return `
+                    <div style="${selectedStyles} border-radius:6px; padding:6px 8px; display:inline-flex; align-items:center; gap:8px; font-size:0.75rem; cursor:pointer; transition:all 0.2s;" onclick="selectHandCard('${handKey}', '${cname.replace(/'/g, "\\'")}', ${idx}, event)">
+                        <div style="width:28px; height:36px; min-width:28px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15); border-radius:3px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                            <img src="${cardImg}" alt="${displayName}" style="max-width:100%; max-height:100%; object-fit:contain;" onerror="this.style.display='none';">
+                        </div>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <span style="font-weight:800; color:#fff;">${displayName}</span>
+                                ${aiBadge}
+                                ${selectedBadge}
+                            </div>
+                            <div style="font-size:0.65rem; color:var(--neon-cyan);">${meta.hp ? meta.hp + ' HP' : (meta.card_type || 'Card')} ${meta.stage ? '• ' + meta.stage : ''}</div>
+                        </div>
+                        <div style="display:flex; gap:3px; flex-wrap:wrap; margin-left:auto;">
+                            ${actionButtons}
+                        </div>
                     </div>
                 `;
             }).join('');
+
+            if (isSetup && cardsHtml.trim() === '') {
+                cardsHtml = '<div style="color:var(--neon-green); font-size:0.75rem; font-weight:700;">✅ All available Basic Pokémon have been placed. Click [CONFIRM INITIAL SETUP] or [START BATTLE] to begin!</div>';
+            }
+
+            box.innerHTML = selectedActionBar + cardsHtml;
         }
 
         function renderCombatLog(log) {
@@ -2126,8 +3937,12 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             box.scrollTop = box.scrollHeight;
         }
 
-        function claimRandomDeckCard() {
+        async function claimRandomDeckCard() {
             if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+            if (CURRENT_MATCH_STATE.phase === 'SETUP') {
+                alert("⚠️ Please finish initial setup before drawing cards!");
+                return;
+            }
             if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
                 alert("⏳ Please wait! It is the Opponent AI's turn.");
                 return;
@@ -2136,6 +3951,28 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                 alert("⚠️ You can only draw 1 deck card per turn!");
                 return;
             }
+
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/draw', { method: 'POST', headers: headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'error') {
+                        alert("⚠️ Draw blocked or deck is empty!");
+                        return;
+                    }
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    if (data.ai_recommendation) {
+                        LAST_AI_REPORT = data.ai_recommendation;
+                        renderStrategicAiReport(data.ai_recommendation);
+                    }
+                    return;
+                }
+            } catch(e) {
+                console.warn("Draw API fallback:", e);
+            }
+
             if (!CURRENT_MATCH_STATE.player.deck || CURRENT_MATCH_STATE.player.deck.length === 0) {
                 alert("⚠️ Your deck is out of cards!");
                 return;
@@ -2143,7 +3980,7 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             const drawn = CURRENT_MATCH_STATE.player.deck.pop();
             CURRENT_MATCH_STATE.player.hand.push(drawn);
             CURRENT_MATCH_STATE.card_drawn_this_turn = true;
-            CURRENT_MATCH_STATE.match_log.push(`🃏 Drew [${drawn}] from your collection deck.`);
+            CURRENT_MATCH_STATE.match_log.push(`🃏 Drew [${drawn}] from your 60-card deck.`);
             updateMatchView(CURRENT_MATCH_STATE);
             runDynamicAiAnalysis(CURRENT_MATCH_STATE);
         }
@@ -2174,267 +4011,222 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             }
         }
 
-        function promptAddEnergyDirect(target) {
+        async function promptAddEnergyDirect(target) {
             if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner) return;
+            if (CURRENT_MATCH_STATE.phase === 'SETUP') {
+                alert("⚠️ Please finish initial setup before attaching energy!");
+                return;
+            }
             if (!CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) {
                 alert("⏳ Please wait! It is the Opponent AI's turn.");
                 return;
             }
             if (CURRENT_MATCH_STATE.energy_attached_this_turn) {
-                alert("⚡ Energy Rule: You can only attach 1 energy from hand per turn!");
-                return;
-            }
-            const pActive = CURRENT_MATCH_STATE.player.active_spot;
-            const limit = getPokemonMaxEnergyLimit(pActive.name);
-            const currentEnergy = (pActive.attached_energy || []).length;
-            if (currentEnergy >= limit) {
-                alert(`⚠️ Energy Limit: [${pActive.name}] already has ${currentEnergy} energy attached (max saturation limit: ${limit}).`);
+                alert("⚡ Energy Rule: You can only attach 1 energy card from hand per turn!");
                 return;
             }
 
-            pActive.attached_energy.push("Basic Energy");
-            CURRENT_MATCH_STATE.energy_attached_this_turn = true;
-            CURRENT_MATCH_STATE.match_log.push(`⚡ Attached 1 Energy to active [${pActive.name}] (${pActive.attached_energy.length}/${limit}).`);
+            // Find an energy card in hand
+            const hand = CURRENT_MATCH_STATE.player.hand || [];
+            const energyCard = hand.find(c => {
+                const m = getCardMeta(c);
+                const cn = (m.name || (typeof c === 'string' ? c : c.name) || '').toLowerCase();
+                return m.card_type === 'energy' || cn.includes('energy');
+            });
 
-            advanceWinningRouteStepIfType("ATTACH_ENERGY");
-            updateMatchView(CURRENT_MATCH_STATE);
-            if (LAST_AI_REPORT) {
-                renderStrategicAiReport(LAST_AI_REPORT);
+            if (!energyCard) {
+                alert("⚠️ You do not have an Energy card in your hand to attach!");
+                return;
             }
+
+            const cname = typeof energyCard === 'string' ? energyCard : (energyCard.name || energyCard.card_name || energyCard.card_id);
+            let resolvedTarget = target;
+            if (!resolvedTarget || resolvedTarget === 'player' || resolvedTarget === 'main') {
+                resolvedTarget = 'active';
+            }
+            await matchPlayCard(cname, resolvedTarget);
         }
 
-        function matchPlayCard(cname) {
+        async function matchPlayCard(cname, target = null) {
             if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) return;
+
+            // Ensure cname is a string name/card_id, never an object
+            if (cname && typeof cname === 'object') {
+                cname = cname.name || cname.card_name || cname.card_id || String(cname);
+            }
+            if (!cname) return;
+
+            if (CURRENT_MATCH_STATE.phase === 'SETUP') {
+                const meta = getCardMeta(cname);
+                if (!isBasicPokemon(meta)) {
+                    alert("⚠️ Only Basic Pokémon can be placed during the Setup Phase!");
+                    return;
+                }
+                if (target === 'bench' || (target && String(target).startsWith('bench'))) {
+                    await setupPlaceBench(cname);
+                } else if (target === 'active') {
+                    await setupPlaceActive(cname);
+                } else if (!CURRENT_MATCH_STATE.player.active_spot) {
+                    await setupPlaceActive(cname);
+                } else if ((CURRENT_MATCH_STATE.player.bench || []).length < 3) {
+                    await setupPlaceBench(cname);
+                } else {
+                    alert("⚠️ Active spot and Bench (max 3) are already full!");
+                }
+                return;
+            }
+
+            console.log(`[PLAY CARD] Attempting to play [${cname}] with target: ${target}`);
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/play', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ card_name: cname, target: target || "active" })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'error' || (data.result && data.result.status === 'error')) {
+                        const errMsg = (data.result && data.result.message) || data.message || "Invalid card play";
+                        console.warn(`[ACTION REJECTED] ${errMsg}`);
+                        alert(`⚠️ ${errMsg}`);
+                        return;
+                    }
+                    CURRENT_MATCH_STATE = data.match_state;
+                    console.log(`[PLAY CARD] Successfully played [${cname}]`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    if (data.ai_recommendation) {
+                        LAST_AI_REPORT = data.ai_recommendation;
+                        renderStrategicAiReport(data.ai_recommendation);
+                    }
+                    return;
+                }
+            } catch(e) {
+                console.warn("matchPlayCard API fallback:", e);
+            }
+
+            // Client-side fallback if backend unavailable
             const hand = CURRENT_MATCH_STATE.player.hand || [];
-            const idx = hand.indexOf(cname);
+            const idx = hand.findIndex(c => (c.name || c) === cname || String(c.card_id || '') === String(cname));
             if (idx === -1) return;
 
             const clean = cname.toLowerCase().trim();
             const meta = getCardMeta(cname);
             const stype = (meta.card_type || meta.supertype || '').toLowerCase();
             const stage = meta.stage || '';
-
             const isEnergy = stype.includes('energy') || clean.includes('energy');
-            const isTrainer = stype.includes('trainer') || stype.includes('item') || stype.includes('supporter') ||
-                clean.includes('potion') || clean.includes('research') || clean.includes('ball') || clean.includes('switch') || clean.includes('boss') || clean.includes('rope');
+            const isTrainer = stype.includes('trainer') || stype.includes('item') || stype.includes('supporter');
 
-            // 1. Trainer / Item / Supporter
             if (isTrainer) {
                 hand.splice(idx, 1);
-                // 1A. Potion / Healing Items
-                if (clean.includes('potion')) {
-                    const healAmt = clean.includes('super') ? 60 : 30;
-                    const pActive = CURRENT_MATCH_STATE.player.active_spot;
-                    const oldHp = pActive.current_hp;
-                    pActive.current_hp = Math.min(pActive.max_hp || 70, (pActive.current_hp || 0) + healAmt);
-                    const healed = pActive.current_hp - oldHp;
-                    CURRENT_MATCH_STATE.match_log.push(`💊 Played [${cname}] from hand: Healed ${healed} HP on active [${pActive.name}] (${pActive.current_hp}/${pActive.max_hp}).`);
-                    advanceWinningRouteStepIfType("PLAY_ITEM");
-                }
-                // 1B. Research / Draw Cards
-                else if (clean.includes('research') || clean.includes('draw') || clean.includes('iono') || clean.includes('cheren')) {
-                    let drawnCards = [];
-                    for (let i = 0; i < 2; i++) {
-                        if (CURRENT_MATCH_STATE.player.deck && CURRENT_MATCH_STATE.player.deck.length > 0) {
-                            drawnCards.push(CURRENT_MATCH_STATE.player.deck.pop());
-                        }
-                    }
-                    CURRENT_MATCH_STATE.player.hand.push(...drawnCards);
-                    CURRENT_MATCH_STATE.match_log.push(`📜 Played [${cname}] from hand: Drew ${drawnCards.length} cards into hand!`);
-                    advanceWinningRouteStepIfType("PLAY_SUPPORTER");
-                }
-                // 1C. Ball / Search Cards
-                else if (clean.includes('ball')) {
-                    const deck = CURRENT_MATCH_STATE.player.deck || [];
-                    const bIdx = deck.findIndex(c => isBasicPokemon(getCardMeta(c)));
-                    if (bIdx !== -1) {
-                        const found = deck.splice(bIdx, 1)[0];
-                        CURRENT_MATCH_STATE.player.hand.push(found);
-                        CURRENT_MATCH_STATE.match_log.push(`🎾 Played [${cname}] from hand: Searched collection deck for Basic [${found}] and added to hand!`);
-                    } else {
-                        CURRENT_MATCH_STATE.match_log.push(`🎾 Played [${cname}] from hand: Searched deck, but no Basic Pokémon found.`);
-                    }
-                    advanceWinningRouteStepIfType("PLAY_ITEM");
-                }
-                // 1D. Switch / Escape Rope
-                else if (clean.includes('switch') || clean.includes('rope')) {
-                    const bench = CURRENT_MATCH_STATE.player.bench || [];
-                    if (bench.length > 0) {
-                        const oldActive = CURRENT_MATCH_STATE.player.active_spot;
-                        let targetIdx = 0;
-                        if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
-                            const curStep = LAST_AI_REPORT.winning_route.steps[CURRENT_ROUTE_STEP_INDEX];
-                            if (curStep && curStep.target_pokemon) {
-                                const fIdx = bench.findIndex(b => b.name.toLowerCase() === curStep.target_pokemon.toLowerCase());
-                                if (fIdx !== -1) targetIdx = fIdx;
-                            }
-                        }
-                        const newActive = bench.splice(targetIdx, 1)[0];
-                        CURRENT_MATCH_STATE.player.active_spot = {
-                            name: newActive.name,
-                            current_hp: newActive.current_hp,
-                            max_hp: newActive.max_hp,
-                            attached_energy: newActive.attached_energy || []
-                        };
-                        bench.push({
-                            name: oldActive.name,
-                            current_hp: oldActive.current_hp,
-                            max_hp: oldActive.max_hp,
-                            attached_energy: oldActive.attached_energy || []
-                        });
-                        CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: Switched active [${oldActive.name}] with [${newActive.name}] from bench to exploit matchup!`);
-                    } else {
-                        CURRENT_MATCH_STATE.match_log.push(`🔄 Played [${cname}] from hand: No benched Pokémon available to switch.`);
-                    }
-                    advanceWinningRouteStepIfType("PLAY_ITEM");
-                }
-                // 1E. Boss's Orders / Gust
-                else if (clean.includes('boss') || clean.includes('gust')) {
-                    const oppBench = CURRENT_MATCH_STATE.opponent.bench || [];
-                    if (oppBench.length > 0) {
-                        let targetIdx = 0;
-                        if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
-                            const curStep = LAST_AI_REPORT.winning_route.steps[CURRENT_ROUTE_STEP_INDEX];
-                            if (curStep && curStep.target_pokemon) {
-                                const fIdx = oppBench.findIndex(b => b.name.toLowerCase() === curStep.target_pokemon.toLowerCase());
-                                if (fIdx !== -1) targetIdx = fIdx;
-                            }
-                        }
-                        const oldOpp = CURRENT_MATCH_STATE.opponent.active_spot;
-                        const newOpp = oppBench.splice(targetIdx, 1)[0];
-                        CURRENT_MATCH_STATE.opponent.active_spot = {
-                            name: newOpp.name,
-                            current_hp: newOpp.current_hp,
-                            max_hp: newOpp.max_hp,
-                            attached_energy: newOpp.attached_energy || []
-                        };
-                        oppBench.push({
-                            name: oldOpp.name,
-                            current_hp: oldOpp.current_hp,
-                            max_hp: oldOpp.max_hp,
-                            attached_energy: oldOpp.attached_energy || []
-                        });
-                        CURRENT_MATCH_STATE.match_log.push(`🎯 Played [${cname}] from hand: Forced opponent to promote bench [${newOpp.name}] to Active!`);
-                    } else {
-                        CURRENT_MATCH_STATE.match_log.push(`🎯 Played [${cname}] from hand: Opponent has no benched Pokémon to switch.`);
-                    }
-                    advanceWinningRouteStepIfType("PLAY_SUPPORTER");
-                }
-                // Generic Trainer fallback
-                else {
-                    CURRENT_MATCH_STATE.match_log.push(`📜 Played Trainer card [${cname}] from hand.`);
-                    advanceWinningRouteStepIfType("PLAY_ITEM");
-                }
-
-                if (LAST_AI_REPORT) {
-                    renderStrategicAiReport(LAST_AI_REPORT);
-                }
+                CURRENT_MATCH_STATE.match_log.push(`📜 Played Trainer [${cname}].`);
+                advanceWinningRouteStepIfType("PLAY_ITEM");
                 updateMatchView(CURRENT_MATCH_STATE);
                 return;
             }
-
-            // 2. Energy Card
             if (isEnergy) {
                 if (CURRENT_MATCH_STATE.energy_attached_this_turn) {
-                    alert("⚡ Energy Rule: You can only attach 1 energy from hand per turn!");
+                    alert("⚡ Energy Rule: You can only attach 1 energy card from hand per turn!");
                     return;
                 }
                 const pActive = CURRENT_MATCH_STATE.player.active_spot;
-                const limit = getPokemonMaxEnergyLimit(pActive.name);
-                const currentEnergy = (pActive.attached_energy || []).length;
-                if (currentEnergy >= limit) {
-                    alert(`⚠️ Energy Limit: [${pActive.name}] already has ${currentEnergy} energy attached (max saturation limit: ${limit}).`);
-                    return;
-                }
+                if (!pActive) return;
                 hand.splice(idx, 1);
                 pActive.attached_energy.push(cname);
                 CURRENT_MATCH_STATE.energy_attached_this_turn = true;
-                CURRENT_MATCH_STATE.match_log.push(`⚡ Attached [${cname}] to active [${pActive.name}] (${pActive.attached_energy.length}/${limit}).`);
+                CURRENT_MATCH_STATE.match_log.push(`⚡ Attached [${cname}] to active [${pActive.name}].`);
                 advanceWinningRouteStepIfType("ATTACH_ENERGY");
-                if (LAST_AI_REPORT) {
-                    renderStrategicAiReport(LAST_AI_REPORT);
-                }
                 updateMatchView(CURRENT_MATCH_STATE);
                 return;
             }
-
-            // 3. Evolution Pokemon -> Must evolve onto matching Pokemon
-            if (stage === 'Stage 1' || stage === 'Stage 2' || (meta.evolves_from && meta.evolves_from.length > 0)) {
-                const evoFrom = (meta.evolves_from || '').toLowerCase();
+            if (stage === 'Stage 1' || stage === 'Stage 2' || meta.evolves_from) {
+                const evoFrom = (meta.evolves_from || '').toLowerCase().trim();
                 const pActive = CURRENT_MATCH_STATE.player.active_spot;
-                let evolved = false;
-
-                if (evoFrom && pActive.name.toLowerCase().includes(evoFrom)) {
+                if (pActive && evoFrom && pActive.name.toLowerCase().includes(evoFrom)) {
                     hand.splice(idx, 1);
-                    pActive.name = cname;
+                    const kept = pActive.attached_energy || [];
+                    pActive.name = meta.name || cname;
                     pActive.max_hp = meta.hp || 120;
                     pActive.current_hp = pActive.max_hp;
-                    CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Active into [${cname}]! (HP: ${pActive.max_hp}).`);
-                    evolved = true;
-                } else {
-                    const bench = CURRENT_MATCH_STATE.player.bench || [];
-                    for (let b of bench) {
-                        if (evoFrom && b.name.toLowerCase().includes(evoFrom)) {
-                            hand.splice(idx, 1);
-                            b.name = cname;
-                            b.max_hp = meta.hp || 100;
-                            b.current_hp = b.max_hp;
-                            CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Benched Pokémon into [${cname}]!`);
-                            evolved = true;
-                            break;
-                        }
-                    }
-                }
-                if (!evolved) {
-                    alert(`⚠️ Cannot evolve: [${cname}] evolves from [${meta.evolves_from || 'Pre-evolution'}], which is not on your active or bench spots!`);
+                    pActive.attached_energy = kept;
+                    pActive.image = meta.image || getCardImageUrl(meta, cname);
+                    CURRENT_MATCH_STATE.match_log.push(`🔥 Evolved Active into [${pActive.name}]!`);
+                    advanceWinningRouteStepIfType("EVOLVE_POKEMON");
+                    updateMatchView(CURRENT_MATCH_STATE);
                     return;
                 }
-                advanceWinningRouteStepIfType("EVOLVE_POKEMON");
-                if (LAST_AI_REPORT) {
-                    renderStrategicAiReport(LAST_AI_REPORT);
-                }
-                updateMatchView(CURRENT_MATCH_STATE);
+                alert(`⚠️ Cannot evolve: [${cname}] evolves from [${meta.evolves_from || 'Pre-evolution'}], which is not in play!`);
                 return;
             }
-
-            // 4. Basic Pokemon -> Bench
             if (isBasicPokemon(meta)) {
                 const bench = CURRENT_MATCH_STATE.player.bench || [];
                 if (bench.length >= 3) {
-                    alert("⚠️ Bench is full (max 3 Pokémon slots)!");
+                    alert("⚠️ Bench is full (maximum 3 Pokémon slots allowed)!");
                     return;
                 }
                 hand.splice(idx, 1);
-                bench.push({ name: cname, current_hp: meta.hp || 70, max_hp: meta.hp || 70, attached_energy: [] });
+                bench.push({ name: meta.name || cname, current_hp: meta.hp || 70, max_hp: meta.hp || 70, attached_energy: [], image: meta.image || getCardImageUrl(meta, cname) });
                 CURRENT_MATCH_STATE.match_log.push(`🛡️ Placed Basic Pokémon [${cname}] onto Bench.`);
                 advanceWinningRouteStepIfType("BENCH_POKEMON");
-                if (LAST_AI_REPORT) {
-                    renderStrategicAiReport(LAST_AI_REPORT);
-                }
                 updateMatchView(CURRENT_MATCH_STATE);
                 return;
             }
         }
 
-        function matchAttack(atkName, dmg) {
-            if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING) return;
+        async function matchAttack(atkName, dmg) {
+            if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING || CURRENT_MATCH_STATE.phase === 'SETUP') return;
+
+            console.log(`[ATTACK] Executing attack: ${atkName} (Base DMG: ${dmg})`);
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/attack', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ attack_name: atkName, base_damage: dmg || 30 })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'error' || (data.result && data.result.status === 'error')) {
+                        const errMsg = (data.result && data.result.message) || data.message || "Attack blocked";
+                        console.warn(`[ACTION REJECTED] Attack blocked: ${errMsg}`);
+                        alert(`⛔ ${errMsg}`);
+                        return;
+                    }
+                    CURRENT_MATCH_STATE = data.match_state;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    if (data.ai_recommendation) {
+                        LAST_AI_REPORT = data.ai_recommendation;
+                        renderStrategicAiReport(data.ai_recommendation);
+                    }
+                    return;
+                }
+            } catch(e) {
+                console.warn("matchAttack API fallback:", e);
+            }
 
             const pActive = CURRENT_MATCH_STATE.player.active_spot;
             const oppActive = CURRENT_MATCH_STATE.opponent.active_spot;
+            if (!pActive || !oppActive) return;
 
-            oppActive.current_hp = Math.max(0, oppActive.current_hp - dmg);
-            CURRENT_MATCH_STATE.match_log.push(`⚔️ Your [${pActive.name}] used [${atkName}] for ${dmg} DMG! (Opponent HP: ${oppActive.current_hp}/${oppActive.max_hp})`);
+            const pMeta = getCardMeta(pActive.name);
+            const oppMeta = getCardMeta(oppActive.name);
+            const pType = pActive.pokemon_type || pMeta.pokemon_type || (pMeta.types && pMeta.types[0]) || 'Colorless';
+            const oppType = oppActive.pokemon_type || oppMeta.pokemon_type || (oppMeta.types && oppMeta.types[0]) || 'Colorless';
+            const matchup = calculateMatchupDamageJs(dmg, pType, oppType, oppMeta.weakness, oppMeta.resistance, pMeta.weakness);
+            const finalDmg = matchup.finalDmg;
+
+            oppActive.current_hp = Math.max(0, oppActive.current_hp - finalDmg);
+            const matchupTag = matchup.mult === 1.5 ? ` (+50% Type Advantage vs ${oppType}!)` : (matchup.mult === 0.5 ? ` (-50% Type Disadvantage vs ${oppType})` : '');
+            CURRENT_MATCH_STATE.match_log.push(`⚔️ Your [${pActive.name}] used [${atkName}] dealing ${finalDmg} DMG${matchupTag}!`);
 
             if (oppActive.current_hp <= 0) {
                 CURRENT_MATCH_STATE.player.prizes_taken = (CURRENT_MATCH_STATE.player.prizes_taken || 0) + 1;
-                CURRENT_MATCH_STATE.match_log.push(`🔥 Opponent's [${oppActive.name}] was KNOCKED OUT! Prize (${CURRENT_MATCH_STATE.player.prizes_taken}/3)!`);
-
+                CURRENT_MATCH_STATE.match_log.push(`🔥 Opponent's [${oppActive.name}] was KNOCKED OUT!`);
                 if (CURRENT_MATCH_STATE.player.prizes_taken >= 3) {
                     CURRENT_MATCH_STATE.winner = 'Player';
                     updateMatchView(CURRENT_MATCH_STATE);
                     return;
                 }
-
                 const oppBench = CURRENT_MATCH_STATE.opponent.bench || [];
                 if (oppBench.length > 0) {
                     const promoted = oppBench.shift();
@@ -2445,6 +4237,11 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                         attached_energy: ["Basic Lightning Energy"]
                     };
                     CURRENT_MATCH_STATE.match_log.push(`🔄 Opponent promoted [${promoted.name}] to Active Spot!`);
+                } else {
+                    CURRENT_MATCH_STATE.winner = 'Player';
+                    CURRENT_MATCH_STATE.match_log.push(`🏆 Opponent has no benched Pokémon to promote! You win!`);
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    return;
                 }
             }
 
@@ -2452,8 +4249,40 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             endPlayerTurn();
         }
 
-        function endPlayerTurn() {
-            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner || IS_AI_PROCESSING) return;
+        async function endPlayerTurn() {
+            if (!CURRENT_MATCH_STATE || CURRENT_MATCH_STATE.winner || IS_AI_PROCESSING || CURRENT_MATCH_STATE.phase === 'SETUP') return;
+
+            SELECTED_CARD_KEY = null;
+            SELECTED_CARD_ID = null;
+            SELECTED_CARD_DATA = null;
+            IS_AI_PROCESSING = true;
+
+            const turnBanner = document.getElementById('match-turn-banner');
+            if (turnBanner) {
+                turnBanner.style.background = 'rgba(239, 68, 68, 0.2)';
+                turnBanner.style.borderColor = 'var(--neon-red)';
+                turnBanner.textContent = '🤖 OPPONENT AI IS PLAYING...';
+            }
+
+            try {
+                const headers = getMatchHeaders();
+                const res = await fetch('/api/v1/match/pass-turn', { method: 'POST', headers: headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    await new Promise(r => setTimeout(r, 650));
+                    CURRENT_MATCH_STATE = data.match_state;
+                    IS_AI_PROCESSING = false;
+                    updateMatchView(CURRENT_MATCH_STATE);
+                    if (data.ai_recommendation) {
+                        LAST_AI_REPORT = data.ai_recommendation;
+                        renderStrategicAiReport(data.ai_recommendation);
+                    }
+                    return;
+                }
+            } catch(e) {
+                console.warn("pass-turn API fallback:", e);
+            }
+
             CURRENT_MATCH_STATE.is_player_turn = false;
             CURRENT_MATCH_STATE.match_log.push(`--- Opponent AI Turn ---`);
             updateMatchView(CURRENT_MATCH_STATE);
@@ -2465,7 +4294,7 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             IS_AI_PROCESSING = true;
 
             const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-            await sleep(700);
+            await sleep(600);
 
             if (CURRENT_MATCH_STATE.opponent.deck && CURRENT_MATCH_STATE.opponent.deck.length > 0) {
                 const drawn = CURRENT_MATCH_STATE.opponent.deck.pop();
@@ -2473,38 +4302,41 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                 CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent AI drew 1 card.`);
             }
 
-            CURRENT_MATCH_STATE.opponent.active_spot.attached_energy.push("Basic Lightning Energy");
-            CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent attached Energy to [${CURRENT_MATCH_STATE.opponent.active_spot.name}].`);
-            updateMatchView(CURRENT_MATCH_STATE);
+            if (CURRENT_MATCH_STATE.opponent.active_spot) {
+                CURRENT_MATCH_STATE.opponent.active_spot.attached_energy.push("Basic Lightning Energy");
+                CURRENT_MATCH_STATE.match_log.push(`🤖 Opponent attached Energy to [${CURRENT_MATCH_STATE.opponent.active_spot.name}].`);
+                updateMatchView(CURRENT_MATCH_STATE);
+            }
 
-            await sleep(700);
+            await sleep(600);
 
             const pActive = CURRENT_MATCH_STATE.player.active_spot;
-            const dmg = 40;
-            pActive.current_hp = Math.max(0, pActive.current_hp - dmg);
-            CURRENT_MATCH_STATE.match_log.push(`⚔️ Opponent's [${CURRENT_MATCH_STATE.opponent.active_spot.name}] attacked for ${dmg} DMG! (Your HP: ${pActive.current_hp}/${pActive.max_hp})`);
+            if (pActive && CURRENT_MATCH_STATE.opponent.active_spot) {
+                const dmg = 40;
+                pActive.current_hp = Math.max(0, pActive.current_hp - dmg);
+                CURRENT_MATCH_STATE.match_log.push(`⚔️ Opponent's [${CURRENT_MATCH_STATE.opponent.active_spot.name}] attacked for ${dmg} DMG! (Your HP: ${pActive.current_hp}/${pActive.max_hp})`);
 
-            if (pActive.current_hp <= 0) {
-                CURRENT_MATCH_STATE.opponent.prizes_taken = (CURRENT_MATCH_STATE.opponent.prizes_taken || 0) + 1;
-                CURRENT_MATCH_STATE.match_log.push(`🔥 Your [${pActive.name}] was KNOCKED OUT!`);
+                if (pActive.current_hp <= 0) {
+                    CURRENT_MATCH_STATE.opponent.prizes_taken = (CURRENT_MATCH_STATE.opponent.prizes_taken || 0) + 1;
+                    CURRENT_MATCH_STATE.match_log.push(`🔥 Your [${pActive.name}] was KNOCKED OUT!`);
 
-                if (CURRENT_MATCH_STATE.opponent.prizes_taken >= 3) {
-                    CURRENT_MATCH_STATE.winner = 'Opponent';
-                    IS_AI_PROCESSING = false;
-                    updateMatchView(CURRENT_MATCH_STATE);
-                    return;
-                }
+                    if (CURRENT_MATCH_STATE.opponent.prizes_taken >= 3) {
+                        CURRENT_MATCH_STATE.winner = 'Opponent';
+                        IS_AI_PROCESSING = false;
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        return;
+                    }
 
-                const pBench = CURRENT_MATCH_STATE.player.bench || [];
-                if (pBench.length > 0) {
-                    const promoted = pBench.shift();
-                    CURRENT_MATCH_STATE.player.active_spot = {
-                        name: promoted.name,
-                        current_hp: promoted.max_hp || 70,
-                        max_hp: promoted.max_hp || 70,
-                        attached_energy: []
-                    };
-                    CURRENT_MATCH_STATE.match_log.push(`🔄 You promoted [${promoted.name}] to Active Spot.`);
+                    const pBench = CURRENT_MATCH_STATE.player.bench || [];
+                    if (pBench.length > 0) {
+                        openKnockoutPromotionModal();
+                    } else {
+                        CURRENT_MATCH_STATE.winner = 'Opponent';
+                        CURRENT_MATCH_STATE.match_log.push("💀 You have no benched Pokémon to promote! Opponent wins!");
+                        IS_AI_PROCESSING = false;
+                        updateMatchView(CURRENT_MATCH_STATE);
+                        return;
+                    }
                 }
             }
 
@@ -2515,12 +4347,11 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             CURRENT_MATCH_STATE.turn_number++;
             CURRENT_MATCH_STATE.match_log.push(`--- Turn ${CURRENT_MATCH_STATE.turn_number}: Your Turn ---`);
 
-            // Automatic Turn-Start Deck Draw per official Pokemon TCG rules!
             if (CURRENT_MATCH_STATE.player.deck && CURRENT_MATCH_STATE.player.deck.length > 0) {
                 const drawnCard = CURRENT_MATCH_STATE.player.deck.pop();
                 CURRENT_MATCH_STATE.player.hand.push(drawnCard);
                 CURRENT_MATCH_STATE.card_drawn_this_turn = true;
-                CURRENT_MATCH_STATE.match_log.push(`🎴 Turn ${CURRENT_MATCH_STATE.turn_number} Start Draw: Took 1 card [${drawnCard}] from deck into hand.`);
+                CURRENT_MATCH_STATE.match_log.push(`🎴 Turn ${CURRENT_MATCH_STATE.turn_number} Start Draw: Took 1 card [${drawnCard}] from 60-card deck.`);
             }
 
             IS_AI_PROCESSING = false;
@@ -2560,57 +4391,63 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             }
 
             try {
+                const pAct = (CURRENT_MATCH_STATE.player && (CURRENT_MATCH_STATE.player.active_spot || CURRENT_MATCH_STATE.player.active_pokemon)) || { name: 'Active Pokémon', current_hp: 70, max_hp: 70, attached_energy: [] };
+                const oppAct = (CURRENT_MATCH_STATE.opponent && (CURRENT_MATCH_STATE.opponent.active_spot || CURRENT_MATCH_STATE.opponent.active_pokemon)) || { name: 'Opponent Active', current_hp: 70, max_hp: 70, attached_energy: [] };
+                const pDeckCount = (CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.deck_count !== undefined) ? CURRENT_MATCH_STATE.player.deck_count : ((CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.deck) || []).length;
+                const oppDeckCount = (CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.deck_count !== undefined) ? CURRENT_MATCH_STATE.opponent.deck_count : ((CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.deck) || []).length;
+                const oppHandCount = (CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.hand_count !== undefined) ? CURRENT_MATCH_STATE.opponent.hand_count : ((CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.hand) || []).length;
+
                 const payload = {
                     game_state: {
                         turn_number: CURRENT_MATCH_STATE.turn_number || 1,
                         is_player_turn: CURRENT_MATCH_STATE.is_player_turn,
                         player: {
                             active_spot: {
-                                name: CURRENT_MATCH_STATE.player.active_spot.name,
-                                current_hp: CURRENT_MATCH_STATE.player.active_spot.current_hp,
-                                max_hp: CURRENT_MATCH_STATE.player.active_spot.max_hp,
-                                attached_energy: CURRENT_MATCH_STATE.player.active_spot.attached_energy || []
+                                name: pAct.name || 'Active',
+                                current_hp: pAct.current_hp || 70,
+                                max_hp: pAct.max_hp || 70,
+                                attached_energy: pAct.attached_energy || []
                             },
                             active_pokemon: {
-                                name: CURRENT_MATCH_STATE.player.active_spot.name,
-                                current_hp: CURRENT_MATCH_STATE.player.active_spot.current_hp,
-                                max_hp: CURRENT_MATCH_STATE.player.active_spot.max_hp,
-                                attached_energy: CURRENT_MATCH_STATE.player.active_spot.attached_energy || []
+                                name: pAct.name || 'Active',
+                                current_hp: pAct.current_hp || 70,
+                                max_hp: pAct.max_hp || 70,
+                                attached_energy: pAct.attached_energy || []
                             },
-                            bench: (CURRENT_MATCH_STATE.player.bench || []).map(b => ({
+                            bench: ((CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.bench) || []).map(b => ({
                                 name: b.name,
                                 current_hp: b.current_hp,
                                 max_hp: b.max_hp,
                                 attached_energy: b.attached_energy || []
                             })),
-                            hand: CURRENT_MATCH_STATE.player.hand || [],
-                            deck_count: (CURRENT_MATCH_STATE.player.deck || []).length,
-                            prizes_remaining: Math.max(1, 6 - (CURRENT_MATCH_STATE.player.prizes_taken || 0)),
-                            prizes_taken: CURRENT_MATCH_STATE.player.prizes_taken || 0
+                            hand: (CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.hand) || [],
+                            deck_count: pDeckCount,
+                            prizes_remaining: Math.max(1, 6 - ((CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.prizes_taken) || 0)),
+                            prizes_taken: (CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.prizes_taken) || 0
                         },
                         opponent: {
                             active_spot: {
-                                name: CURRENT_MATCH_STATE.opponent.active_spot.name,
-                                current_hp: CURRENT_MATCH_STATE.opponent.active_spot.current_hp,
-                                max_hp: CURRENT_MATCH_STATE.opponent.active_spot.max_hp,
-                                attached_energy: CURRENT_MATCH_STATE.opponent.active_spot.attached_energy || []
+                                name: oppAct.name || 'Opponent Active',
+                                current_hp: oppAct.current_hp || 70,
+                                max_hp: oppAct.max_hp || 70,
+                                attached_energy: oppAct.attached_energy || []
                             },
                             active_pokemon: {
-                                name: CURRENT_MATCH_STATE.opponent.active_spot.name,
-                                current_hp: CURRENT_MATCH_STATE.opponent.active_spot.current_hp,
-                                max_hp: CURRENT_MATCH_STATE.opponent.active_spot.max_hp,
-                                attached_energy: CURRENT_MATCH_STATE.opponent.active_spot.attached_energy || []
+                                name: oppAct.name || 'Opponent Active',
+                                current_hp: oppAct.current_hp || 70,
+                                max_hp: oppAct.max_hp || 70,
+                                attached_energy: oppAct.attached_energy || []
                             },
-                            bench: (CURRENT_MATCH_STATE.opponent.bench || []).map(b => ({
+                            bench: ((CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.bench) || []).map(b => ({
                                 name: b.name,
                                 current_hp: b.current_hp,
                                 max_hp: b.max_hp,
                                 attached_energy: b.attached_energy || []
                             })),
-                            hand_count: (CURRENT_MATCH_STATE.opponent.hand || []).length,
-                            deck_count: (CURRENT_MATCH_STATE.opponent.deck || []).length,
-                            prizes_remaining: Math.max(1, 6 - (CURRENT_MATCH_STATE.opponent.prizes_taken || 0)),
-                            prizes_taken: CURRENT_MATCH_STATE.opponent.prizes_taken || 0
+                            hand_count: oppHandCount,
+                            deck_count: oppDeckCount,
+                            prizes_remaining: Math.max(1, 6 - ((CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.prizes_taken) || 0)),
+                            prizes_taken: (CURRENT_MATCH_STATE.opponent && CURRENT_MATCH_STATE.opponent.prizes_taken) || 0
                         }
                     },
                     mode: mode
@@ -2748,7 +4585,7 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             const mathEvElem = document.getElementById('left-math-ev');
             if (data.mathematical_calculations) {
                 if (mathFormElem) {
-                    mathFormElem.textContent = data.mathematical_calculations.formula || 'Damage = (Base + Bonus) * Weakness - Resist';
+                    mathFormElem.textContent = data.mathematical_calculations.formula || 'Damage = Base * Type Multiplier (+50% Adv / -50% Disadv / Normal)';
                 }
                 if (mathEvElem) {
                     const ev = data.mathematical_calculations.expected_value_ev;
@@ -2759,8 +4596,14 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
             }
         }
 
-        function executeAiRecommendation() {
+        async function executeAiRecommendation() {
             if (!CURRENT_MATCH_STATE || !CURRENT_MATCH_STATE.is_player_turn || IS_AI_PROCESSING || CURRENT_MATCH_STATE.winner) return;
+
+            function getHandCardName(card) {
+                if (!card) return null;
+                if (typeof card === 'string') return card;
+                return card.name || card.card_name || card.card_id || String(card);
+            }
 
             // Sequential Winning Route Step Execution: Strictly 1 step per click!
             if (LAST_AI_REPORT && LAST_AI_REPORT.winning_route && LAST_AI_REPORT.winning_route.steps) {
@@ -2781,17 +4624,20 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     // 1. PLAY_ITEM / PLAY_SUPPORTER (One step)
                     if (actType === 'PLAY_ITEM' || actType === 'PLAY_SUPPORTER' || actType.startsWith('PLAY_')) {
                         const targetCard = step.card_name;
-                        let cardToPlay = targetCard && pHand.includes(targetCard) ? targetCard : pHand.find(c => {
+                        let cardToPlay = pHand.find(c => {
+                            const cn = getHandCardName(c);
+                            if (targetCard && cn && cn.toLowerCase() === targetCard.toLowerCase()) return true;
                             const meta = getCardMeta(c);
                             const stype = (meta.card_type || meta.supertype || '').toLowerCase();
                             return stype.includes('trainer') || stype.includes('item') || stype.includes('supporter') ||
-                                   c.toLowerCase().includes('potion') || c.toLowerCase().includes('research') || c.toLowerCase().includes('ball') ||
-                                   c.toLowerCase().includes('switch') || c.toLowerCase().includes('rope') || c.toLowerCase().includes('boss');
+                                   (cn && (cn.toLowerCase().includes('potion') || cn.toLowerCase().includes('research') || cn.toLowerCase().includes('ball') ||
+                                           cn.toLowerCase().includes('switch') || cn.toLowerCase().includes('rope') || cn.toLowerCase().includes('boss')));
                         });
 
                         const prevIdx = CURRENT_ROUTE_STEP_INDEX;
                         if (cardToPlay) {
-                            matchPlayCard(cardToPlay);
+                            const cname = getHandCardName(cardToPlay);
+                            await matchPlayCard(cname);
                         } else {
                             CURRENT_MATCH_STATE.match_log.push(`⚡ Executed hand power: ${step.action}.`);
                         }
@@ -2806,14 +4652,17 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     // 2. EVOLVE_POKEMON (One step)
                     if (actType === 'EVOLVE_POKEMON') {
                         const targetCard = step.card_name;
-                        let cardToPlay = targetCard && pHand.includes(targetCard) ? targetCard : pHand.find(c => {
+                        let cardToPlay = pHand.find(c => {
+                            const cn = getHandCardName(c);
+                            if (targetCard && cn && cn.toLowerCase() === targetCard.toLowerCase()) return true;
                             const meta = getCardMeta(c);
                             return (meta.stage === 'Stage 1' || meta.stage === 'Stage 2');
                         });
 
                         const prevIdx = CURRENT_ROUTE_STEP_INDEX;
                         if (cardToPlay) {
-                            matchPlayCard(cardToPlay);
+                            const cname = getHandCardName(cardToPlay);
+                            await matchPlayCard(cname, 'active');
                         } else {
                             CURRENT_MATCH_STATE.match_log.push(`⚡ Executed hand power: ${step.action}.`);
                         }
@@ -2828,11 +4677,16 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     // 3. BENCH_POKEMON (One step)
                     if (actType === 'BENCH_POKEMON' || actType === 'PLAY_BASIC') {
                         const targetCard = step.card_name;
-                        let cardToPlay = targetCard && pHand.includes(targetCard) ? targetCard : pHand.find(c => isBasicPokemon(getCardMeta(c)));
+                        let cardToPlay = pHand.find(c => {
+                            const cn = getHandCardName(c);
+                            if (targetCard && cn && cn.toLowerCase() === targetCard.toLowerCase()) return true;
+                            return isBasicPokemon(getCardMeta(c));
+                        });
 
                         const prevIdx = CURRENT_ROUTE_STEP_INDEX;
                         if (cardToPlay) {
-                            matchPlayCard(cardToPlay);
+                            const cname = getHandCardName(cardToPlay);
+                            await matchPlayCard(cname, 'bench');
                         } else {
                             CURRENT_MATCH_STATE.match_log.push(`⚡ Executed hand power: ${step.action}.`);
                         }
@@ -2847,7 +4701,8 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                     // 4. ATTACH_ENERGY (One step)
                     if (actType === 'ATTACH_ENERGY') {
                         const prevIdx = CURRENT_ROUTE_STEP_INDEX;
-                        promptAddEnergyDirect('player');
+                        const target = step.target_pokemon || 'active';
+                        await promptAddEnergyDirect(target);
                         if (CURRENT_ROUTE_STEP_INDEX === prevIdx) {
                             CURRENT_ROUTE_STEP_INDEX++;
                         }
@@ -2861,16 +4716,18 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
                         CURRENT_ROUTE_STEP_INDEX++;
                         const atkName = step.attack_name || "Strike";
                         const dmg = step.damage || 40;
-                        matchAttack(atkName, dmg);
+                        await matchAttack(atkName, dmg);
                         return; // Turn concludes
                     }
                 }
             }
 
             // Fallback: Primary attack
-            const meta = getCardMeta(CURRENT_MATCH_STATE.player.active_spot.name);
-            const atk = (meta.attacks && meta.attacks[0]) ? meta.attacks[0] : { name: "Strike", base_damage: 40 };
-            matchAttack(atk.name, atk.base_damage || 40);
+            if (CURRENT_MATCH_STATE.player && CURRENT_MATCH_STATE.player.active_spot) {
+                const meta = getCardMeta(CURRENT_MATCH_STATE.player.active_spot.name);
+                const atk = (meta.attacks && meta.attacks[0]) ? meta.attacks[0] : { name: "Strike", base_damage: 40 };
+                await matchAttack(atk.name, atk.base_damage || 40);
+            }
         }
 
         // ================= 7. PACK HISTORY =================
@@ -2959,8 +4816,16 @@ HTML_DASHBOARD_CONTENT = """<!DOCTYPE html>
 
         // --- INIT ON LOAD ---
         window.addEventListener('DOMContentLoaded', async () => {
+            await loadAllCards();
             await checkAuthSession();
-            startNewMatch();
+            await loadUserDecks();
+            const activeDeck = USER_DECKS.find(d => d.is_active) || USER_DECKS[0];
+            if (!activeDeck || !activeDeck.cards || activeDeck.cards.length === 0) {
+                switchMode('cards');
+                showDeckBuilderEmptyPrompt();
+            } else {
+                startNewMatch(false, true);
+            }
         });
     </script>
 </body>

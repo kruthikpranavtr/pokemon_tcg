@@ -117,7 +117,7 @@ class PositionEvaluator:
         hand_adv = max(0.0, min(1.0, 0.5 + (p_hand_size - opp_hand_size) / 14.0))
 
         # 7. Setup Potential
-        has_evolution = any("stage" in (c.get("stage", "") if isinstance(c, dict) else "").lower() for c in player.get("hand", []))
+        has_evolution = any("stage" in str(c.get("stage") or "").lower() for c in player.get("hand", []) if isinstance(c, dict))
         setup_pot = 0.8 if has_evolution and p_bench_count >= 2 else (0.5 if p_bench_count >= 1 else 0.2)
 
         # 8. Tempo
@@ -279,7 +279,8 @@ class PositionEvaluator:
         p_act_hp = player_act.get("current_hp", 70)
         p_act_max_hp = player_act.get("max_hp", 70)
 
-        hand_card_names = [c.get("name") if isinstance(c, dict) else str(c) for c in hand]
+        hand_card_names = [str(c.get("name") or c.get("card_name") or c.get("card_id") or "") if isinstance(c, dict) else str(c or "") for c in hand]
+        hand_card_names = [c for c in hand_card_names if c]
         turn_energy_used = turn_flags.get("energy_attached_this_turn", False)
         supporter_used = turn_flags.get("supporter_played_this_turn", False)
 

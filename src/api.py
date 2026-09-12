@@ -1,10 +1,12 @@
 import os
 import sys
 import json
+import re
 from typing import Dict, List, Any, Optional, Union
 from fastapi import FastAPI, HTTPException, Header, Query, Depends, Security
 from fastapi.security.api_key import APIKeyHeader, APIKeyQuery
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import numpy as np
@@ -47,6 +49,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+if not os.path.exists(STATIC_DIR):
+    os.makedirs(STATIC_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 # Load data assets
 CARDS_FILE = os.path.join(BASE_DIR, "data", "cards_dataset.json")
 META_FILE = os.path.join(BASE_DIR, "data", "tournament_meta.json")
@@ -55,6 +63,44 @@ WEIGHTS_FILE = os.path.join(BASE_DIR, "models", "policy_value_weights.json")
 with open(CARDS_FILE, "r", encoding="utf-8") as f:
     cards_data = json.load(f)
     CARD_DB = {c["card_id"]: c for c in cards_data["cards"]}
+
+# Merge master_cards from SQLite database for full authentic card support (2,551+ cards)
+try:
+    import sqlite3
+    db_path = os.path.join(BASE_DIR, "data", "pokemon_tcg.db")
+    if os.path.exists(db_path):
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        m_rows = conn.execute("SELECT * FROM master_cards").fetchall()
+        conn.close()
+        for r in m_rows:
+            c = dict(r)
+            cid = str(c.get("card_id", "")).strip()
+            cname = c.get("name") or c.get("card_name") or ""
+            if "attacks_json" in c and c["attacks_json"]:
+                try:
+                    c["attacks"] = json.loads(c["attacks_json"])
+                except Exception:
+                    c["attacks"] = []
+            c["card_name"] = cname
+            if cid:
+                CARD_DB[cid] = c
+            if cname and cname.lower() not in CARD_DB:
+                CARD_DB[cname.lower()] = c
+except Exception as e:
+    print(f"Notice: master_cards merge: {e}")
+
+from src.engine.energy_config import CANONICAL_BASIC_ENERGIES, ENERGY_TYPES
+
+# Ensure all 9 canonical basic energies and stable IDs are registered in CARD_DB
+for etype, edata in CANONICAL_BASIC_ENERGIES.items():
+    cid = edata["card_id"]
+    cname = edata["card_name"]
+    CARD_DB[cid] = dict(edata)
+    CARD_DB[cname] = dict(edata)
+    CARD_DB[cname.lower()] = dict(edata)
+    CARD_DB[f"{etype.lower()} energy"] = dict(edata)
+    CARD_DB[f"basic {etype.lower()} energy"] = dict(edata)
 
 with open(META_FILE, "r", encoding="utf-8") as f:
     META_DB = json.load(f)
@@ -113,12 +159,47 @@ def verify_api_key(
         token = authorization[7:].strip()
         if token in VALID_API_KEYS:
             return token
+        try:
+            import src.database as db
+            user = db.get_user_by_token(token)
+            if user:
+                return token
+        except Exception:
+            pass
 
     # If key is missing or invalid
     raise HTTPException(
         status_code=401,
         detail="Unauthorized: Missing or invalid API Key. Please provide a valid key via the 'X-API-Key' header, 'Authorization: Bearer <key>', or '?api_key=<key>' query parameter. Default demo key: 'tcg-live-secret-key-2026'"
     )
+
+
+def get_current_user_optional(
+    authorization: Optional[str] = Header(None),
+    x_auth_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None)
+) -> Optional[Dict[str, Any]]:
+    raw_token = None
+    if authorization and authorization.startswith('Bearer '):
+        raw_token = authorization[7:].strip()
+    elif x_auth_token:
+        raw_token = x_auth_token.strip()
+    elif token:
+        raw_token = token.strip()
+    if raw_token:
+        return db.get_user_by_token(raw_token)
+    return None
+
+
+def require_current_user(
+    authorization: Optional[str] = Header(None),
+    x_auth_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None)
+) -> Dict[str, Any]:
+    user = get_current_user_optional(authorization, x_auth_token, token)
+    if not user:
+        raise HTTPException(status_code=401, detail='Authentication required. Please log in.')
+    return user
 
 
 # --- PYDANTIC SCHEMAS ---
@@ -239,9 +320,9 @@ def process_recommendation_inference(
 
     prize_map = rules_engine.compute_prize_map(game_state)
 
-    player = game_state.get("player", {})
-    opponent = game_state.get("opponent", {})
-    opp_active = opponent.get("active_spot", {})
+    player = game_state.get("player") or {}
+    opponent = game_state.get("opponent") or {}
+    opp_active = opponent.get("active_spot") or {}
 
     turn_recommendations = []
     for rank, item in enumerate(ranked_mcts_moves, start=1):
@@ -285,6 +366,58 @@ def process_recommendation_inference(
     except Exception as e:
         print(f"Notice: Winning Route calculation fallback ({e})")
 
+    p_active_dict = player.get("active_spot") or {}
+    opp_active_dict = opp_active if isinstance(opp_active, dict) else {}
+
+    # Compute dedicated AI Basic Pokémon setup recommendation for Main & Bench
+    setup_recommendations = {}
+    hand_cards = player.get("hand", [])
+    basic_evals = []
+    for c in hand_cards:
+        c_name = c.get("name") if isinstance(c, dict) else str(c)
+        meta = tcg_match_engine._get_meta(c_name)
+        if meta.get("card_type") == "pokemon" and meta.get("stage") == "Basic":
+            hp = meta.get("hp", 70)
+            attacks = meta.get("attacks", [])
+            max_atk_dmg = max([a.get("base_damage", 0) for a in attacks], default=30)
+            min_atk_cost = min([len(a.get("cost", [])) for a in attacks], default=1)
+            opp_type = opp_active_dict.get("pokemon_type") or "Colorless"
+            weakness = meta.get("weakness", "")
+            has_weakness_disadvantage = opp_type.lower() in weakness.lower() if weakness else False
+
+            base_win_prob = 0.52 + (hp - 70) * 0.002 + (max_atk_dmg - 30) * 0.003 - (min_atk_cost - 1) * 0.02
+            if has_weakness_disadvantage:
+                base_win_prob -= 0.08
+            win_prob = float(np.clip(base_win_prob, 0.45, 0.89))
+
+            basic_evals.append({
+                "card_name": c_name,
+                "card_id": meta.get("card_id"),
+                "hp": hp,
+                "max_damage": max_atk_dmg,
+                "energy_speed": min_atk_cost,
+                "winning_probability": round(win_prob, 4),
+                "winning_probability_pct": f"{win_prob * 100:.1f}%",
+                "strategic_reason": f"{hp} HP with {max_atk_dmg} DMG attack gives strong early-game tempo."
+            })
+
+    basic_evals.sort(key=lambda x: x["winning_probability"], reverse=True)
+    if basic_evals:
+        best_main = dict(basic_evals[0])
+        best_main["recommended_for"] = "main"
+        best_bench = []
+        for b in basic_evals[1:4]:
+            b_copy = dict(b)
+            b_copy["recommended_for"] = "bench"
+            best_bench.append(b_copy)
+
+        setup_recommendations = {
+            "recommended_main": best_main,
+            "recommended_bench": best_bench,
+            "all_evaluations": basic_evals,
+            "summary": f"Place [{best_main['card_name']}] into Main ({best_main['winning_probability_pct']} Win Possibility)" + (f", and [{', '.join(b['card_name'] for b in best_bench)}] onto Bench." if best_bench else ".")
+        }
+
     return {
         "status": "success",
         "session_id": session_id,
@@ -294,15 +427,16 @@ def process_recommendation_inference(
         "base_transformer_win_prob_pct": f"{base_transformer_win_prob * 100:.1f}%",
         "turn_summary": {
             "turn_number": game_state.get("turn_number", 1),
-            "our_active": player.get("active_spot", {}).get("name"),
-            "our_active_hp": player.get("active_spot", {}).get("current_hp"),
+            "our_active": p_active_dict.get("name"),
+            "our_active_hp": p_active_dict.get("current_hp"),
             "our_hand_size": len(player.get("hand", [])),
-            "opponent_active": opp_active.get("name"),
-            "opponent_active_hp": opp_active.get("current_hp"),
+            "opponent_active": opp_active_dict.get("name"),
+            "opponent_active_hp": opp_active_dict.get("current_hp"),
             "opponent_archetype": opponent.get("archetype", "Opponent Deck")
         },
         "top_recommended_move": top_move,
         "all_recommended_moves": turn_recommendations[:6],
+        "setup_recommendation": setup_recommendations,
         "winning_route": winning_route,
         "mcts_search_telemetry": mcts_telemetry,
         "gnn_board_telemetry": gnn_telemetry,
@@ -429,7 +563,10 @@ def analyze_game_state(
         )
         return report
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Strategic AI Analysis error: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        print("ANALYZE TRACEBACK:\n", tb)
+        raise HTTPException(status_code=500, detail=f"Strategic AI Analysis error: {str(e)}\n{tb}")
 
 
 @app.post("/api/v1/optimize-deck")
@@ -477,19 +614,58 @@ def search_cards(
 
 # --- 60-CARD MATCH SIMULATOR SCHEMAS & ENDPOINTS ---
 class StartMatchRequest(BaseModel):
-    player_deck_id: Optional[str] = Field(default="charizard-ex-pidgeot")
-    opp_deck_id: Optional[str] = Field(default="miraidon-ex-regieleki")
+    player_deck_id: Optional[str] = Field(default="charizard-fire")
+    opp_deck_id: Optional[str] = Field(default="pikachu-lightning")
+    deck_slot: Optional[int] = Field(default=None)
     custom_deck_list: Optional[List[Union[str, Dict[str, Any]]]] = Field(default=None)
 
 
-class PlayMatchCardRequest(BaseModel):
+class InitialPlaceRequest(BaseModel):
     card_name: str
+    slot: Optional[str] = "active"
+
+
+class AttachEnergyRequest(BaseModel):
+    card_name: str
+    target: Optional[str] = "active"
+
+
+class BenchPokemonRequest(BaseModel):
+    card_name: str
+    slot_index: Optional[int] = None
+
+
+class EvolvePokemonRequest(BaseModel):
+    card_name: str
+    target: Optional[str] = "active"
+
+
+class SwitchRetreatRequest(BaseModel):
+    bench_slot: int
+
+
+class PromoteActiveRequest(BaseModel):
+    bench_slot: int
+
+
+class PlayMatchCardRequest(BaseModel):
+    card_name: Union[str, Dict[str, Any]]
     target: Optional[str] = None
 
 
 class AttackMatchRequest(BaseModel):
     attack_name: str
     base_damage: Optional[int] = 0
+
+
+class SaveUserDeckRequest(BaseModel):
+    slot: int
+    deck_name: str
+    cards: List[str]
+
+
+class SelectUserDeckRequest(BaseModel):
+    slot: int
 
 
 @app.get("/api/v1/decks/all")
@@ -504,19 +680,29 @@ def get_all_decks():
 @app.post("/api/v1/match/start")
 def start_60card_match(
     req: StartMatchRequest,
-    api_key: str = Depends(verify_api_key)
+    api_key: Optional[str] = Depends(verify_api_key),
+    user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
 ):
-    """Initializes a full 60-card Pokémon TCG match with custom or archetype deck list."""
+    """Initializes a full 60-card Pokémon TCG match with custom, saved user deck, or archetype deck list."""
+    deck_cards = req.custom_deck_list
+    if req.deck_slot and not deck_cards:
+        # Check if user is logged in
+        if user:
+            decks = db.get_user_decks(user["id"])
+            matching = [d for d in decks if d["slot"] == req.deck_slot]
+            if matching and matching[0]["cards"]:
+                deck_cards = matching[0]["cards"]
+
     tcg_match_engine.reset_match(
-        player_deck_id=req.player_deck_id or "charizard-ex-pidgeot",
-        opp_deck_id=req.opp_deck_id or "miraidon-ex-regieleki",
-        custom_player_deck=req.custom_deck_list
+        player_deck_id=req.player_deck_id or "charizard-fire",
+        opp_deck_id=req.opp_deck_id or "random",
+        custom_player_deck=deck_cards
     )
     state = tcg_match_engine.get_game_state_dict()
     ai_recs = process_recommendation_inference(state, session_id="live-match-60card", mcts_simulations=40)
     return {
         "status": "success",
-        "message": "60-Card Match Initialized.",
+        "message": "60-Card Match Initialized. 5 cards dealt to hand.",
         "match_state": state,
         "deck_counts": {
             "player_deck": len(tcg_match_engine.player_deck),
@@ -528,6 +714,171 @@ def start_60card_match(
         },
         "match_log": tcg_match_engine.match_log,
         "ai_recommendation": ai_recs
+    }
+
+
+@app.post("/api/v1/match/initial-place")
+def initial_place_card(
+    req: InitialPlaceRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Places a Basic Pokémon from 5-card hand into Active or Bench during SETUP."""
+    res = tcg_match_engine.place_initial_pokemon(req.card_name, req.slot or "active")
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/place-and-battle")
+def place_and_battle_endpoint(
+    req: InitialPlaceRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Places chosen Pokémon into Active or Bench and immediately starts BATTLE phase."""
+    res = tcg_match_engine.place_and_start_battle(req.card_name, req.slot or "active")
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/auto-place")
+def auto_place_endpoint(api_key: str = Depends(verify_api_key)):
+    """Automatically places 1 Basic Pokémon into Active, up to 3 into Bench, and starts BATTLE."""
+    res = tcg_match_engine.auto_place_initial_pokemon()
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/confirm-setup")
+def confirm_setup_endpoint(api_key: str = Depends(verify_api_key)):
+    """Confirms initial placements and transitions match from SETUP to BATTLE."""
+    res = tcg_match_engine.confirm_initial_placement()
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/mulligan")
+def mulligan_endpoint(api_key: str = Depends(verify_api_key)):
+    """Redraws 5 cards if hand contains no Basic Pokémon."""
+    res = tcg_match_engine.mulligan_player_hand()
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/attach-energy")
+def attach_energy_endpoint(
+    req: AttachEnergyRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Attaches an Energy card to Active or Bench Pokémon (once per turn)."""
+    res = tcg_match_engine.attach_energy(req.card_name, req.target or "active")
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/bench-pokemon")
+def bench_pokemon_endpoint(
+    req: BenchPokemonRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Places a Basic Pokémon from hand into an empty bench slot (max 3 bench)."""
+    res = tcg_match_engine.play_basic_pokemon_to_bench(req.card_name, req.slot_index)
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/evolve")
+def evolve_pokemon_endpoint(
+    req: EvolvePokemonRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Evolves Active or Bench Pokémon using evolves_from rule."""
+    res = tcg_match_engine.evolve_pokemon(req.card_name, req.target or "active")
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/retreat")
+@app.post("/api/v1/match/switch")
+def retreat_switch_endpoint(
+    req: SwitchRetreatRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Switches Active Pokémon with one of the 3 Bench Pokémon."""
+    res = tcg_match_engine.switch_or_retreat(req.bench_slot)
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.post("/api/v1/match/promote-active")
+def promote_active_endpoint(
+    req: PromoteActiveRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Selects a Bench Pokémon to become Active following a knockout."""
+    res = tcg_match_engine.promote_bench_to_active(req.bench_slot)
+    state = tcg_match_engine.get_game_state_dict()
+    return {
+        "status": res.get("status", "success"),
+        "result": res,
+        "match_state": state,
+        "match_log": tcg_match_engine.match_log
+    }
+
+
+@app.get("/api/v1/match/legal-actions")
+def get_legal_actions_endpoint(api_key: str = Depends(verify_api_key)):
+    """Returns currently legal actions calculated from authoritative game state."""
+    actions = tcg_match_engine.get_available_legal_actions()
+    return {
+        "status": "success",
+        "turn_number": tcg_match_engine.turn_number,
+        "phase": tcg_match_engine.phase,
+        "actions_count": len(actions),
+        "actions": actions
     }
 
 
@@ -551,14 +902,39 @@ def get_match_state(api_key: str = Depends(verify_api_key)):
     }
 
 
+@app.post("/api/v1/match/debug-state")
+def set_debug_match_state(req: Dict[str, Any]):
+    """Debug endpoint for test harnesses to set in-memory match engine state directly."""
+    if "phase" in req:
+        tcg_match_engine.phase = req["phase"]
+    if "is_player_turn" in req:
+        tcg_match_engine.is_player_turn = req["is_player_turn"]
+    if "player_active" in req:
+        tcg_match_engine.player_active = req["player_active"]
+    if "opp_active" in req:
+        tcg_match_engine.opp_active = req["opp_active"]
+    if "player_bench" in req:
+        tcg_match_engine.player_bench = req["player_bench"]
+    if "opp_bench" in req:
+        tcg_match_engine.opp_bench = req["opp_bench"]
+    if "player_hand" in req:
+        tcg_match_engine.player_hand = req["player_hand"]
+    if "match_log" in req:
+        tcg_match_engine.match_log = req["match_log"]
+    return {
+        "status": "success",
+        "match_state": tcg_match_engine.get_game_state_dict()
+    }
+
+
 @app.post("/api/v1/match/draw")
 def draw_card_endpoint(api_key: str = Depends(verify_api_key)):
-    """Draws a card from the 60-card deck to hand."""
+    """Draws a card from the 60-card deck to hand (once per turn)."""
     card = tcg_match_engine.draw_card(is_player=True)
     state = tcg_match_engine.get_game_state_dict()
     ai_recs = process_recommendation_inference(state, session_id="live-match-60card", mcts_simulations=30)
     return {
-        "status": "success",
+        "status": "success" if card else "error",
         "drawn_card": card,
         "match_state": state,
         "match_log": tcg_match_engine.match_log,
@@ -571,8 +947,47 @@ def play_match_card(
     req: PlayMatchCardRequest,
     api_key: str = Depends(verify_api_key)
 ):
-    """Plays a card from hand (bench, evolve, energy attachment, supporter, item)."""
-    result = tcg_match_engine.play_hand_card(req.card_name, req.target)
+    """Plays a card from hand based on card type and current match phase."""
+    cname = req.card_name
+    if isinstance(cname, dict):
+        cname = cname.get("name") or cname.get("card_name") or str(cname.get("card_id", ""))
+    cname = str(cname)
+    meta = tcg_match_engine._get_meta(cname)
+    ctype = meta.get("card_type")
+    stage = meta.get("stage")
+
+    if tcg_match_engine.phase == "SETUP":
+        target = req.target
+        if not target:
+            target = "active" if tcg_match_engine.player_active is None else "bench"
+        result = tcg_match_engine.place_initial_pokemon(cname, target)
+    elif ctype == "energy" or "energy" in cname.lower():
+        result = tcg_match_engine.attach_energy(cname, req.target or "active")
+    elif ctype == "pokemon" and stage in ["Stage 1", "Stage 2"]:
+        result = tcg_match_engine.evolve_pokemon(cname, req.target or "active")
+    elif ctype == "pokemon" and stage == "Basic":
+        if tcg_match_engine.phase == "SETUP":
+            target = req.target or ("active" if tcg_match_engine.player_active is None else "bench")
+            result = tcg_match_engine.place_initial_pokemon(cname, target)
+        elif tcg_match_engine.player_active is None:
+            actual_card = tcg_match_engine._find_card_in_player_hand(cname)
+            if actual_card:
+                tcg_match_engine.player_hand.remove(actual_card)
+                tcg_match_engine.player_active = tcg_match_engine._create_pokemon_dict(actual_card, meta)
+                tcg_match_engine.match_log.append(f"👑 Placed Basic Pokémon [{tcg_match_engine.player_active['name']}] into ACTIVE slot.")
+                result = {"status": "success", "slot": "active", "card": tcg_match_engine.player_active["name"]}
+            else:
+                result = {"status": "error", "message": f"'{cname}' is not in your hand."}
+        else:
+            slot_idx = None
+            if req.target and any(d in req.target for d in ["0", "1", "2"]):
+                slot_idx = int(re.sub(r"[^\d]", "", req.target))
+            result = tcg_match_engine.play_basic_pokemon_to_bench(cname, slot_idx)
+    elif ctype == "trainer":
+        result = tcg_match_engine.play_trainer_card(cname, req.target)
+    else:
+        result = tcg_match_engine.play_hand_card(cname, req.target)
+
     state = tcg_match_engine.get_game_state_dict()
     ai_recs = process_recommendation_inference(state, session_id="live-match-60card", mcts_simulations=30)
     return {
@@ -589,12 +1004,12 @@ def attack_match_endpoint(
     req: AttackMatchRequest,
     api_key: str = Depends(verify_api_key)
 ):
-    """Executes active Pokémon attack against opponent active with damage & prize resolutions."""
+    """Executes active Pokémon attack against opponent active with energy requirement validation."""
     result = tcg_match_engine.execute_attack(req.attack_name, req.base_damage or 0)
     state = tcg_match_engine.get_game_state_dict()
     ai_recs = process_recommendation_inference(state, session_id="live-match-60card", mcts_simulations=30)
     return {
-        "status": "success",
+        "status": result.get("status", "success"),
         "attack_result": result,
         "match_state": state,
         "winner": tcg_match_engine.winner,
@@ -603,10 +1018,11 @@ def attack_match_endpoint(
     }
 
 
+@app.post("/api/v1/match/pass-turn")
 @app.post("/api/v1/match/end-turn")
 def end_turn_endpoint(api_key: str = Depends(verify_api_key)):
-    """Passes turn, simulates opponent response, and draws for next turn."""
-    tcg_match_engine.end_turn()
+    """Passes turn, simulates opponent response, and begins next turn."""
+    res = tcg_match_engine.end_turn()
     state = tcg_match_engine.get_game_state_dict()
     ai_recs = process_recommendation_inference(state, session_id="live-match-60card", mcts_simulations=30)
     return {
@@ -623,7 +1039,11 @@ def end_turn_endpoint(api_key: str = Depends(verify_api_key)):
 def summon_from_deck_endpoint(req: Dict[str, Any] = {}, api_key: str = Depends(verify_api_key)):
     """Summons a basic Pokémon from deck into an empty bench slot."""
     cname = req.get("card_name")
-    res = tcg_match_engine.summon_pokemon_from_deck(is_player=True, card_name=cname)
+    b_card = tcg_match_engine._extract_basic_from_hand_or_deck([], tcg_match_engine.player_deck)
+    if b_card:
+        res = tcg_match_engine.play_basic_pokemon_to_bench(b_card)
+    else:
+        res = {"status": "error", "message": "No Basic Pokémon in deck."}
     state = tcg_match_engine.get_game_state_dict()
     ai_recs = process_recommendation_inference(state, session_id="live-match-60card", mcts_simulations=30)
     return {
@@ -679,34 +1099,6 @@ class LoginRequest(BaseModel):
 
 class ValidateDeckRequest(BaseModel):
     chosen_cards: List[str]
-
-
-def get_current_user_optional(
-    authorization: Optional[str] = Header(None),
-    x_auth_token: Optional[str] = Header(None),
-    token: Optional[str] = Query(None)
-) -> Optional[Dict[str, Any]]:
-    raw_token = None
-    if authorization and authorization.startswith('Bearer '):
-        raw_token = authorization[7:].strip()
-    elif x_auth_token:
-        raw_token = x_auth_token.strip()
-    elif token:
-        raw_token = token.strip()
-    if raw_token:
-        return db.get_user_by_token(raw_token)
-    return None
-
-
-def require_current_user(
-    authorization: Optional[str] = Header(None),
-    x_auth_token: Optional[str] = Header(None),
-    token: Optional[str] = Query(None)
-) -> Dict[str, Any]:
-    user = get_current_user_optional(authorization, x_auth_token, token)
-    if not user:
-        raise HTTPException(status_code=401, detail='Authentication required. Please log in.')
-    return user
 
 
 @app.post('/api/v1/auth/register')
@@ -838,13 +1230,54 @@ def api_get_master_cards(
     return {'status': 'success', 'total': total, 'count': len(cards), 'cards': cards}
 
 
+@app.get('/api/v1/decks/user')
+def api_get_user_decks(user: Dict[str, Any] = Depends(require_current_user)):
+    """Returns the user's 3 deck slots and active battle deck."""
+    decks = db.get_user_decks(user['id'])
+    return {'status': 'success', 'decks': decks}
+
+
+@app.post('/api/v1/decks/user/save')
+def api_save_user_deck(
+    req: SaveUserDeckRequest,
+    user: Dict[str, Any] = Depends(require_current_user)
+):
+    """Saves up to 60 cards into deck slot 1, 2, or 3."""
+    if req.slot not in [1, 2, 3]:
+        raise HTTPException(status_code=400, detail='Deck slot must be 1, 2, or 3.')
+    if len(req.cards) > 60:
+        raise HTTPException(status_code=400, detail='Deck cannot exceed 60 cards.')
+    deck = db.save_user_deck(user['id'], req.slot, req.deck_name, req.cards)
+    return {'status': 'success', 'message': f"Saved '{req.deck_name}' to slot {req.slot}.", 'deck': deck}
+
+
+@app.post('/api/v1/decks/user/select')
+def api_select_user_deck(
+    req: SelectUserDeckRequest,
+    user: Dict[str, Any] = Depends(require_current_user)
+):
+    """Sets a deck slot as the active battle deck."""
+    if req.slot not in [1, 2, 3]:
+        raise HTTPException(status_code=400, detail='Deck slot must be 1, 2, or 3.')
+    res = db.select_active_deck(user['id'], req.slot)
+    return {'status': 'success', 'message': f'Slot {req.slot} set as active battle deck.', 'active_deck': res}
+
+
+@app.get('/api/v1/decks/user/active')
+def api_get_active_deck(user: Dict[str, Any] = Depends(require_current_user)):
+    """Returns the user's currently active battle deck."""
+    deck = db.get_active_deck(user['id'])
+    return {'status': 'success', 'active_deck': deck}
+
+
 @app.post('/api/v1/battle/validate-deck')
 def api_validate_deck(
     req: ValidateDeckRequest,
     user: Dict[str, Any] = Depends(require_current_user)
 ):
-    if len(req.chosen_cards) != 4:
-        raise HTTPException(status_code=400, detail='Must provide exactly 4 card names.')
+    """Validates user deck cards."""
+    if len(req.chosen_cards) > 60:
+        raise HTTPException(status_code=400, detail='Deck cannot exceed 60 cards.')
 
     owned_cards = db.get_user_collection(user['id'], limit=1000)
     owned_map = {c['name'].lower(): c for c in owned_cards}
@@ -853,9 +1286,12 @@ def api_validate_deck(
         clean = name.lower().strip()
         if clean not in owned_map:
             raise HTTPException(status_code=400, detail=f'You do not own {name}!')
-        card = owned_map[clean]
-        if card.get('stage') not in [None, 'Basic']:
-            raise HTTPException(status_code=400, detail=f'{name} is not a Basic Pokémon!')
+        meta = tcg_match_engine._get_meta(name)
+        if len(req.chosen_cards) <= 4 and meta.get("card_type") == "pokemon" and meta.get("stage") != "Basic":
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{name}' is {meta.get('stage', 'an Evolution')}, not a Basic Pokémon! Only Basic Pokémon can be placed into starting field slots."
+            )
 
     return {'status': 'success', 'valid': True, 'chosen_cards': req.chosen_cards}
 

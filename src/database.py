@@ -118,16 +118,46 @@ def init_db():
     );
     """)
 
+    # 6. User Decks Table (Supports up to 3 custom 60-card decks per user)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_decks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        deck_slot INTEGER NOT NULL CHECK(deck_slot BETWEEN 1 AND 3),
+        deck_name TEXT NOT NULL,
+        cards_json TEXT NOT NULL,
+        is_active_battle_deck BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, deck_slot),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
+
+    # Check and migrate columns on master_cards table
+    info = cursor.execute("PRAGMA table_info(master_cards)").fetchall()
+    cols = [r[1] for r in info]
+    for col, col_type in [
+        ("card_name", "TEXT"),
+        ("attack_1_name", "TEXT"),
+        ("attack_1_damage", "TEXT"),
+        ("attack_1_energy", "TEXT"),
+        ("attack_2_name", "TEXT"),
+        ("attack_2_damage", "TEXT"),
+        ("attack_2_energy", "TEXT"),
+        ("ability", "TEXT"),
+        ("weakness", "TEXT"),
+        ("resistance", "TEXT"),
+        ("retreat_cost", "INTEGER")
+    ]:
+        if col not in cols:
+            cursor.execute(f"ALTER TABLE master_cards ADD COLUMN {col} {col_type};")
+
     conn.commit()
 
-    # Seed master cards if table is empty
-    count = cursor.execute("SELECT COUNT(*) FROM master_cards").fetchone()[0]
-    if count == 0:
-        seed_master_cards(conn)
-    else:
-        # Check if classic trainers like Potion and Poké Ball exist, if not ensure them
-        ensure_classic_trainers(conn)
-
+    # Seed/update master cards with authentic images and attributes
+    seed_master_cards(conn)
+    ensure_classic_trainers(conn)
     conn.close()
 
 
@@ -177,23 +207,30 @@ def assign_card_rarity(c: dict) -> str:
     return "Common"
 
 
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+
 def get_pokemon_image_url(c: dict) -> str:
-    # Try dataset_id if numeric (Pokédex ID)
-    ds_id = c.get("dataset_id")
-    pokedex_id = None
-    if ds_id:
-        try:
-            clean_id = str(ds_id).replace("ex-", "").replace("pkm-", "").strip()
-            num = int(clean_id)
-            if 1 <= num <= 1025:
-                pokedex_id = num
-        except (ValueError, TypeError):
-            pass
+    cid = str(c.get("card_id") or c.get("dataset_id") or "").strip()
+    img_filename = f"{cid}.png"
+    img_disk_path = os.path.join(STATIC_DIR, "card_images", img_filename)
+    if cid and os.path.exists(img_disk_path):
+        return f"/static/card_images/{img_filename}"
 
-    if pokedex_id:
-        return f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{pokedex_id}.png"
+    ctype = (c.get("card_type") or "").lower()
+    if ctype == "energy":
+        return "/static/card_images/placeholder_energy.svg"
+    if ctype == "trainer":
+        st = (c.get("stage") or "").lower()
+        if "supporter" in st:
+            return "/static/card_images/placeholder_supporter.svg"
+        if "tool" in st:
+            return "/static/card_images/placeholder_tool.svg"
+        if "stadium" in st:
+            return "/static/card_images/placeholder_stadium.svg"
+        return "/static/card_images/placeholder_item.svg"
 
-    return ""
+    return "/static/card_images/placeholder_pokemon.svg"
 
 
 def ensure_classic_trainers(conn: sqlite3.Connection):
@@ -300,18 +337,258 @@ def seed_master_cards(conn: sqlite3.Connection):
         elif c.get("abilities"):
             effect = " ".join(a.get("effect", "") for a in c["abilities"])
 
+        atk1_name = c.get("attack_1_name")
+        atk1_dmg = str(c.get("attack_1_damage") or "")
+        atk1_energy = json.dumps(c.get("attack_1_energy") or [])
+
+        atk2_name = c.get("attack_2_name")
+        atk2_dmg = str(c.get("attack_2_damage") or "")
+        atk2_energy = json.dumps(c.get("attack_2_energy") or [])
+
+        ability = c.get("ability") or ""
+        weakness = c.get("weakness") or ""
+        resistance = c.get("resistance") or ""
+        retreat_cost = int(c.get("retreat_cost") or 0)
+
         cursor.execute("""
         INSERT OR REPLACE INTO master_cards (
-            card_id, dataset_id, name, card_type, pokemon_type, stage,
-            evolves_from, rarity, hp, image, attacks_json, effect, raw_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            card_id, dataset_id, name, card_name, card_type, pokemon_type, stage,
+            evolves_from, rarity, hp, image, attacks_json, effect,
+            attack_1_name, attack_1_damage, attack_1_energy,
+            attack_2_name, attack_2_damage, attack_2_energy,
+            ability, weakness, resistance, retreat_cost, raw_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            cid, ds_id, name, card_type, pkmn_type, stage,
-            evolves_from, rarity, hp, image, attacks_json, effect, json.dumps(c)
+            cid, ds_id, name, c.get("card_name", name), card_type, pkmn_type, stage,
+            evolves_from, rarity, hp, image, attacks_json, effect,
+            atk1_name, atk1_dmg, atk1_energy,
+            atk2_name, atk2_dmg, atk2_energy,
+            ability, weakness, resistance, retreat_cost, json.dumps(c)
         ))
 
     ensure_classic_trainers(conn)
     conn.commit()
+
+
+def ensure_starter_collection(user_id: int):
+    """
+    Grants a starter card pool to a user if their collection is empty.
+    Provides authentic Basic Pokémon, Evolutions, Trainers, and Basic Energy
+    so the trainer can immediately build 60-card decks and battle.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    count = cursor.execute("SELECT COUNT(*) FROM user_collection WHERE user_id = ?", (user_id,)).fetchone()[0]
+    if count > 0:
+        conn.close()
+        return
+
+    # Basic Energies (15 each of G, R, W, L)
+    energy_rows = cursor.execute("""
+    SELECT card_id FROM master_cards WHERE card_type = 'energy' AND (stage IS NULL OR stage = '') LIMIT 8
+    """).fetchall()
+
+    # Basic Pokémon (4 copies each of first 15 basic pokemon)
+    basic_rows = cursor.execute("""
+    SELECT card_id FROM master_cards WHERE card_type = 'pokemon' AND stage = 'Basic' LIMIT 15
+    """).fetchall()
+
+    # Evolution Pokémon (3 copies each of first 10 stage 1/2)
+    evo_rows = cursor.execute("""
+    SELECT card_id FROM master_cards WHERE card_type = 'pokemon' AND stage IN ('Stage 1', 'Stage 2') LIMIT 10
+    """).fetchall()
+
+    # Trainers (4 copies each of first 10 trainers)
+    trainer_rows = cursor.execute("""
+    SELECT card_id FROM master_cards WHERE card_type = 'trainer' LIMIT 10
+    """).fetchall()
+
+    now_iso = get_utc_now().isoformat()
+
+    for r in energy_rows:
+        cursor.execute("""
+        INSERT OR IGNORE INTO user_collection (user_id, card_id, quantity, first_obtained, last_obtained)
+        VALUES (?, ?, 15, ?, ?)
+        """, (user_id, r["card_id"], now_iso, now_iso))
+
+    for r in basic_rows:
+        cursor.execute("""
+        INSERT OR IGNORE INTO user_collection (user_id, card_id, quantity, first_obtained, last_obtained)
+        VALUES (?, ?, 4, ?, ?)
+        """, (user_id, r["card_id"], now_iso, now_iso))
+
+    for r in evo_rows:
+        cursor.execute("""
+        INSERT OR IGNORE INTO user_collection (user_id, card_id, quantity, first_obtained, last_obtained)
+        VALUES (?, ?, 3, ?, ?)
+        """, (user_id, r["card_id"], now_iso, now_iso))
+
+    for r in trainer_rows:
+        cursor.execute("""
+        INSERT OR IGNORE INTO user_collection (user_id, card_id, quantity, first_obtained, last_obtained)
+        VALUES (?, ?, 4, ?, ?)
+        """, (user_id, r["card_id"], now_iso, now_iso))
+
+    conn.commit()
+    conn.close()
+
+
+# --- DECK BUILDING SYSTEM (UP TO 3 DECKS, UP TO 60 CARDS EACH) ---
+
+def get_user_decks(user_id: int) -> List[Dict[str, Any]]:
+    """
+    Returns user's 3 deck slots with cards and counts.
+    If a slot has not been configured yet, returns a clean default slot.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+    SELECT deck_slot, deck_name, cards_json, is_active_battle_deck, updated_at
+    FROM user_decks
+    WHERE user_id = ?
+    ORDER BY deck_slot ASC
+    """, (user_id,)).fetchall()
+    conn.close()
+
+    deck_dict = {r["deck_slot"]: dict(r) for r in rows}
+    result = []
+    for slot in [1, 2, 3]:
+        if slot in deck_dict:
+            d = deck_dict[slot]
+            raw_cids = json.loads(d["cards_json"] or "[]")
+            result.append({
+                "slot": slot,
+                "deck_name": d["deck_name"],
+                "cards": raw_cids,
+                "card_count": len(raw_cids),
+                "is_active": bool(d["is_active_battle_deck"]),
+                "updated_at": d.get("updated_at")
+            })
+        else:
+            result.append({
+                "slot": slot,
+                "deck_name": f"My Deck {slot}",
+                "cards": [],
+                "card_count": 0,
+                "is_active": (slot == 1),
+                "updated_at": None
+            })
+    return result
+
+
+def save_user_deck(user_id: int, deck_slot: int, deck_name: str, card_ids: List[str]) -> Dict[str, Any]:
+    """
+    Saves a deck list for a specific deck slot (1, 2, or 3).
+    Enforces maximum of 60 cards per deck.
+    """
+    if deck_slot not in [1, 2, 3]:
+        raise ValueError("Deck slot must be 1, 2, or 3.")
+    if len(card_ids) > 60:
+        raise ValueError(f"Deck cannot exceed 60 cards. Currently has {len(card_ids)} cards.")
+
+    clean_name = deck_name.strip() or f"My Deck {deck_slot}"
+    cards_json = json.dumps(card_ids)
+    now_iso = get_utc_now().isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    existing = cursor.execute("SELECT is_active_battle_deck FROM user_decks WHERE user_id = ? AND deck_slot = ?", (user_id, deck_slot)).fetchone()
+    is_active = existing["is_active_battle_deck"] if existing else (1 if deck_slot == 1 else 0)
+
+    cursor.execute("""
+    INSERT INTO user_decks (user_id, deck_slot, deck_name, cards_json, is_active_battle_deck, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, deck_slot) DO UPDATE SET
+        deck_name = excluded.deck_name,
+        cards_json = excluded.cards_json,
+        updated_at = excluded.updated_at
+    """, (user_id, deck_slot, clean_name, cards_json, is_active, now_iso))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "status": "success",
+        "slot": deck_slot,
+        "deck_name": clean_name,
+        "card_count": len(card_ids),
+        "cards": card_ids,
+        "is_active": bool(is_active)
+    }
+
+
+def select_active_deck(user_id: int, deck_slot: int) -> Dict[str, Any]:
+    """
+    Selects which of the 3 decks is active for battle.
+    """
+    if deck_slot not in [1, 2, 3]:
+        raise ValueError("Deck slot must be 1, 2, or 3.")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    existing = cursor.execute("SELECT id FROM user_decks WHERE user_id = ? AND deck_slot = ?", (user_id, deck_slot)).fetchone()
+    if not existing:
+        cursor.execute("""
+        INSERT INTO user_decks (user_id, deck_slot, deck_name, cards_json, is_active_battle_deck)
+        VALUES (?, ?, ?, '[]', 1)
+        """, (user_id, deck_slot, f"My Deck {deck_slot}"))
+
+    cursor.execute("UPDATE user_decks SET is_active_battle_deck = 0 WHERE user_id = ?", (user_id,))
+    cursor.execute("UPDATE user_decks SET is_active_battle_deck = 1 WHERE user_id = ? AND deck_slot = ?", (user_id, deck_slot))
+    conn.commit()
+
+    deck_row = cursor.execute("SELECT deck_slot, deck_name, cards_json FROM user_decks WHERE user_id = ? AND deck_slot = ?", (user_id, deck_slot)).fetchone()
+    conn.close()
+
+    raw_cids = json.loads(deck_row["cards_json"] or "[]")
+    return {
+        "status": "success",
+        "active_slot": deck_slot,
+        "deck_name": deck_row["deck_name"],
+        "card_count": len(raw_cids),
+        "cards": raw_cids
+    }
+
+
+def get_active_deck(user_id: int) -> Dict[str, Any]:
+    """
+    Retrieves the currently selected battle deck for the user.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    row = cursor.execute("""
+    SELECT deck_slot, deck_name, cards_json, is_active_battle_deck
+    FROM user_decks
+    WHERE user_id = ? AND is_active_battle_deck = 1
+    """, (user_id,)).fetchone()
+    if not row:
+        row = cursor.execute("""
+        SELECT deck_slot, deck_name, cards_json, is_active_battle_deck
+        FROM user_decks
+        WHERE user_id = ?
+        ORDER BY deck_slot ASC LIMIT 1
+        """, (user_id,)).fetchone()
+    conn.close()
+
+    if row:
+        raw_cids = json.loads(row["cards_json"] or "[]")
+        return {
+            "slot": row["deck_slot"],
+            "deck_name": row["deck_name"],
+            "card_count": len(raw_cids),
+            "cards": raw_cids,
+            "is_active": True
+        }
+    return {
+        "slot": 1,
+        "deck_name": "My Deck 1",
+        "card_count": 0,
+        "cards": [],
+        "is_active": True
+    }
 
 
 # --- AUTHENTICATION & USERS ---
@@ -494,9 +771,7 @@ def get_user_collection(
 
     query = """
     SELECT uc.quantity, uc.first_obtained, uc.last_obtained,
-           m.card_id, m.dataset_id, m.name, m.card_type, m.pokemon_type,
-           m.stage, m.evolves_from, m.rarity, m.hp, m.image,
-           m.attacks_json, m.effect, m.raw_json
+           m.*
     FROM user_collection uc
     JOIN master_cards m ON uc.card_id = m.card_id
     WHERE uc.user_id = ?
@@ -542,8 +817,19 @@ def get_user_collection(
     result = []
     for r in rows:
         c = dict(r)
+        c["card_name"] = c.get("card_name") or c.get("name")
         c["attacks"] = json.loads(c.get("attacks_json") or "[]")
         c["raw_data"] = json.loads(c.get("raw_json") or "{}")
+        if "attack_1_energy" in c and isinstance(c["attack_1_energy"], str):
+            try:
+                c["attack_1_energy"] = json.loads(c["attack_1_energy"])
+            except Exception:
+                pass
+        if "attack_2_energy" in c and isinstance(c["attack_2_energy"], str):
+            try:
+                c["attack_2_energy"] = json.loads(c["attack_2_energy"])
+            except Exception:
+                pass
         result.append(c)
 
     return result
@@ -687,8 +973,19 @@ def get_master_cards(
     cards = []
     for r in rows:
         c = dict(r)
+        c["card_name"] = c.get("card_name") or c.get("name")
         c["attacks"] = json.loads(c.get("attacks_json") or "[]")
         c["raw_data"] = json.loads(c.get("raw_json") or "{}")
+        if "attack_1_energy" in c and isinstance(c["attack_1_energy"], str):
+            try:
+                c["attack_1_energy"] = json.loads(c["attack_1_energy"])
+            except Exception:
+                pass
+        if "attack_2_energy" in c and isinstance(c["attack_2_energy"], str):
+            try:
+                c["attack_2_energy"] = json.loads(c["attack_2_energy"])
+            except Exception:
+                pass
         cards.append(c)
 
     return total, cards

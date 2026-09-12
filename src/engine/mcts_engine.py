@@ -67,13 +67,15 @@ class MCTSEngine:
         if opp_prizes_left <= 0:
             return True, 0.0
 
-        p_active_hp = player.get("active_spot", {}).get("current_hp", 1)
-        opp_active_hp = opponent.get("active_spot", {}).get("current_hp", 1)
+        p_active = player.get("active_spot") or {}
+        opp_active = opponent.get("active_spot") or {}
+        p_active_hp = p_active.get("current_hp", 1) if isinstance(p_active, dict) else 1
+        opp_active_hp = opp_active.get("current_hp", 1) if isinstance(opp_active, dict) else 1
 
         # Check bench out
-        if p_active_hp <= 0 and len(player.get("bench", [])) == 0:
+        if p_active_hp <= 0 and len([b for b in player.get("bench", []) if b]) == 0:
             return True, 0.0
-        if opp_active_hp <= 0 and len(opponent.get("bench", [])) == 0:
+        if opp_active_hp <= 0 and len([b for b in opponent.get("bench", []) if b]) == 0:
             return True, 1.0
 
         return False, None
@@ -87,9 +89,9 @@ class MCTSEngine:
         Simulates an action transition to produce a new hypothetical state.
         """
         next_state = copy.deepcopy(state)
-        player = next_state.get("player", {})
-        opponent = next_state.get("opponent", {})
-        turn_flags = next_state.get("turn_flags", {})
+        player = next_state.get("player") or {}
+        opponent = next_state.get("opponent") or {}
+        turn_flags = next_state.get("turn_flags") or {}
 
         act_type = action.get("action_type")
 
@@ -103,11 +105,11 @@ class MCTSEngine:
         elif act_type == "PLAY_SUPPORTER":
             turn_flags["supporter_played_this_turn"] = True
             card_id = action.get("card_id")
-            player["hand"] = [c for c in player.get("hand", []) if c.get("card_id") != card_id]
+            player["hand"] = [c for c in player.get("hand", []) if (c.get("card_id") if isinstance(c, dict) else c) != card_id]
 
         elif act_type == "PLAY_ITEM":
             card_id = action.get("card_id")
-            player["hand"] = [c for c in player.get("hand", []) if c.get("card_id") != card_id]
+            player["hand"] = [c for c in player.get("hand", []) if (c.get("card_id") if isinstance(c, dict) else c) != card_id]
 
         elif act_type == "EVOLVE_POKEMON":
             card_id = action.get("card_id")
@@ -116,27 +118,40 @@ class MCTSEngine:
             if target == "ACTIVE" and player.get("active_spot"):
                 player["active_spot"]["name"] = card_name
                 player["active_spot"]["current_hp"] = max(player["active_spot"].get("current_hp", 100), 250)
-            player["hand"] = [c for c in player.get("hand", []) if c.get("card_id") != card_id]
+            player["hand"] = [c for c in player.get("hand", []) if (c.get("card_id") if isinstance(c, dict) else c) != card_id]
 
         elif act_type == "ATTACK":
             dmg = action.get("base_damage", 0)
-            opp_active = opponent.get("active_spot", {})
-            curr_hp = opp_active.get("current_hp", 100)
+            opp_active = opponent.get("active_spot") or {}
+            curr_hp = opp_active.get("current_hp", 100) if isinstance(opp_active, dict) else 100
             new_hp = max(0, curr_hp - dmg)
-            opp_active["current_hp"] = new_hp
+            if isinstance(opp_active, dict):
+                opp_active["current_hp"] = new_hp
 
             # If Knockout
             if new_hp == 0:
-                prizes_taken = 2 if "ex" in opp_active.get("name", "").lower() or "v" in opp_active.get("name", "").lower() else 1
+                prizes_taken = 2 if isinstance(opp_active, dict) and ("ex" in opp_active.get("name", "").lower() or "v" in opp_active.get("name", "").lower()) else 1
                 player["prizes_remaining"] = max(0, player.get("prizes_remaining", 6) - prizes_taken)
                 player["prizes_taken"] = player.get("prizes_taken", 0) + prizes_taken
+
+        elif act_type == "PLACE_ACTIVE_POKEMON":
+            card_id = action.get("card_id")
+            card_name = action.get("card_name", "Active Basic")
+            player["active_spot"] = {
+                "name": card_name,
+                "card_id": card_id,
+                "current_hp": 70,
+                "max_hp": 70,
+                "attached_energy": []
+            }
+            player["hand"] = [c for c in player.get("hand", []) if (c.get("card_id") if isinstance(c, dict) else c) != card_id]
 
         elif act_type == "BENCH_BASIC_POKEMON":
             card_id = action.get("card_id")
             card_name = action.get("card_name", "Basic")
             bench = player.setdefault("bench", [])
             bench.append({"slot": len(bench) + 1, "card_id": card_id, "name": card_name, "current_hp": 70, "attached_energy": []})
-            player["hand"] = [c for c in player.get("hand", []) if c.get("card_id") != card_id]
+            player["hand"] = [c for c in player.get("hand", []) if (c.get("card_id") if isinstance(c, dict) else c) != card_id]
 
         return next_state
 
